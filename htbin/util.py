@@ -56,9 +56,29 @@ def eval_hash(st, h='md5'):
 
 # get evenly distributed points from a range
 def even_points(low,up,leng):
-	list = []
+	lst = []
 	step = (up - low) / float(leng)
 	for i in range(leng):
-		list.append(low)
+		lst.append(low)
 		low = low + step
-	return list
+	return lst
+
+
+
+# json with comments
+# either takes bytes or path to the file
+# default = path. Add True as a second param to eval json bytes
+def giga_json(inp, bt=False):
+	import json
+	from pathlib import Path
+
+	if bt == True:
+		jsb = inp
+	else:
+		jspath = Path(inp)
+		if not jspath.is_file():
+			raise Exception('Path passed to giga_json does not exist')
+		jsb = jspath.read_bytes()
+
+	return json.loads(b'\n'.join([ln for ln in jsb.split(b'\n') if not ln.strip().startswith(b'//')]))
+

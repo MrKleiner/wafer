@@ -1,5 +1,10 @@
 {
+	// database with passwords, logins and tokens
 	"auth_db_loc": "/home/basket/web_db/accounts_auth.json",
+	// database with user allowance
 	"clearance_db": "/home/basket/web_db/ctrl_clearance.json",
-	"preview_db": "/raid/btg_prdb"
+	// database with previews and a temp dir
+	"preview_db": "/raid/btg_prdb",
+	// root of the target file system
+	"system_root": "/raid/basketftp"
 }
