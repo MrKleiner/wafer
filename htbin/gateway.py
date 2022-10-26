@@ -1,4 +1,4 @@
-#!/usr/bin/python3.9
+#!/usr/bin/python3
 import os, sys, json, hashlib, base64, cgi, cgitb
 # from tools import *
 from pathlib import Path

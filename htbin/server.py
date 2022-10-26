@@ -15,9 +15,13 @@ class server_allowance_db:
 
 class server:
 	"""All the stuff passed to server + server config"""
-	def __init__(self, cgi, sys):
-		from util import giga_json
+	def __init__(self, cgi, sys, cgitb):
+		# from util import giga_json
 		from pathlib import Path
+		import util
+
+		# traceback messages
+		cgitb.enable()
 
 		self.Pathl = Path
 
@@ -45,7 +49,7 @@ class server:
 		self.server_root = Path(__file__).parent.parent
 
 		# raw server config
-		self.sv_cfg = giga_json(server_root / 'htbin' / 'server_config.json')
+		self.sv_cfg = util.giga_json(server_root / 'htbin' / 'server_config.json')
 
 		# system db with other folders, like previews and temp shit
 		self.preview_db = Path(self.sv_cfg['preview_db'])
@@ -54,6 +58,7 @@ class server:
 		self.sys_root = Path(self.sv_cfg['system_root'])
 
 		# self.user_token = self.auth_db.get(url_params.get('auth'))
+		self.util = util
 
 
 	# @property
@@ -74,7 +79,16 @@ class server:
 		# do flush
 		self.inp_sys.stdout.buffer.flush()
 		self.inp_sys.stdout.flush()
+		sys.exit()
 
+
+	# add to bin
+	# expects bytes
+	def bin_write(self, dat):
+		if not isinstance(dat, bytes):
+			raise Exception('Cant add anything besides bytes to output buffer')
+
+		self.bin += dat
 
 	# spit file
 	def x_files(self, flpath, flname):
@@ -94,6 +108,7 @@ class server:
 
 		self.inp_sys.stdout.buffer.flush()
 		self.inp_sys.stdout.flush()
+		self.inp_sys.exit()
 
 
 	# login,password,token database

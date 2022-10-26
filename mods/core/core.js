@@ -121,7 +121,7 @@ $(document).ready(function(){
 // prms: URL parameters to pass to the CGI script
 // as: treat response as text/json/buffer
 // returns json with response status and payload
-$this.py_get = async function(prms={}, load_as='text')
+$this.py_get = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
@@ -133,7 +133,7 @@ $this.py_get = async function(prms={}, load_as='text')
 
 	// exec...
 	return new Promise(function(resolve, reject){
-		fetch(`htbin/gateway.py?${urlParams.toString()}`, {
+		fetch(`htbin/${mod}.py?${urlParams.toString()}`, {
 			'headers': {
 				'accept': '*/*',
 				'cache-control': 'no-cache',

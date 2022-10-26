@@ -13,6 +13,7 @@ $this.load_module = async function()
 $this.intrusion = async function()
 {
 	const try_login =await $all.core.py_get(
+		'profiles/profiles',
 		{
 			'action': 'login',
 			'password': $('login #login_pswd').val(),
@@ -20,6 +21,7 @@ $this.intrusion = async function()
 		},
 		'json'
 	)
+	print(try_login)
 
 
 	// if received token - reload
