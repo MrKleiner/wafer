@@ -24,8 +24,9 @@ $this.load_root_dir = async function()
 {
 	// list root shite
 	const roots = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_leagues'
+			'action': 'list_leagues'
 		},
 		'json'
 	)
@@ -58,8 +59,9 @@ $this.list_league_matches = async function(elm)
 	const full_root = (await $all.core.load_dbfile('root.json', 'json'))['root_path']
 
 	const subroot_flds = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_league_matches',
+			'action': 'list_league_matches',
 			'league_name': fld_name
 		},
 		'json'
@@ -101,8 +103,9 @@ $this.list_match_struct = async function(elm)
 	$this.update_vis_path()
 
 	const dirlisting = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_match_struct',
+			'action': 'list_match_struct',
 			'match_name': `${window.league}/${window.league_match}`
 		},
 		'json'
@@ -145,8 +148,9 @@ $this.list_media = async function(elm=null, manual=false)
 	$this.update_vis_path()
 
 	$this.dirlisting = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_media',
+			'action': 'list_media',
 			'target': `${window.league}/${window.league_match}/${window.struct_fld}`
 		},
 		'json'
@@ -170,13 +174,14 @@ $this.list_media = async function(elm=null, manual=false)
 		// stupid
 		// load preview first
 		var media_preview = await $all.core.py_get(
+			'poolsys/poolsys',
 			{
-				'action': 'poolsys.load_media_preview',
+				'action': 'load_media_preview',
 				'media_path': lst['path']
 			},
 			'blob_url'
 		)
-		// print(media_preview)
+		print(media_preview)
 		// return
 		if (lst['lfs'] == true){
 			const urlParams = new URLSearchParams({
@@ -306,8 +311,9 @@ $this.load_fullres_media = async function(elm)
 	$('body').append(tgt)
 
 	const fullres = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.load_fullres_pic',
+			'action': 'load_fullres_pic',
 			'target': media_path
 		},
 		'blob_url'

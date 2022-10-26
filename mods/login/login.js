@@ -16,8 +16,8 @@ $this.intrusion = async function()
 		'profiles/profiles',
 		{
 			'action': 'login',
-			'password': $('login #login_pswd').val(),
-			'username': $('login #login_username').val()
+			'password': $('login #login_pswd').val().trim() || '0',
+			'username': $('login #login_username').val().trim() || '0'
 		},
 		'json'
 	)

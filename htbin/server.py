@@ -18,12 +18,15 @@ class server:
 	def __init__(self, cgi, sys, cgitb):
 		# from util import giga_json
 		from pathlib import Path
+		import json
 		import util
 
 		# traceback messages
 		cgitb.enable()
 
+		# don't append modules many times...
 		self.Pathl = Path
+		self.json = json
 
 		# input sys module
 		self.inp_sys = sys
@@ -46,10 +49,13 @@ class server:
 			pass
 
 		# server root folder
-		self.server_root = Path(__file__).parent.parent
+		for pr in Path(__file__).parents:
+			if (pr / 'htbin').is_dir():
+				self.server_root = pr
+				break
 
 		# raw server config
-		self.sv_cfg = util.giga_json(server_root / 'htbin' / 'server_config.json')
+		self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
 
 		# system db with other folders, like previews and temp shit
 		self.preview_db = Path(self.sv_cfg['preview_db'])
@@ -59,6 +65,44 @@ class server:
 
 		# self.user_token = self.auth_db.get(url_params.get('auth'))
 		self.util = util
+
+
+		#
+		# applicable formats
+		#
+
+		self.allowed_vid = [
+			'mp4',
+			'mov',
+			'webm',
+			'ts',
+			'mts',
+			'mkv',
+			'avi'
+		]
+
+		self.allowed_img = [
+			'jpg',
+			'jpeg',
+			'jp2',
+			'j2k',
+			'png',
+			'tif',
+			'tiff',
+			'tga',
+			'webp',
+			'psd',
+			'apng',
+			'gif',
+			'avif',
+			'bmp',
+			'dib',
+			'raw',
+			'arw',
+			'jfif',
+			'jif',
+			'hdr'
+		]
 
 
 	# @property
@@ -73,13 +117,13 @@ class server:
 	# spit shit
 	def flush(self):
 		# general info
-		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n'.encode())
+		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
 		self.inp_sys.stdout.buffer.write(self.sv_buffer)
 		# do flush
 		self.inp_sys.stdout.buffer.flush()
 		self.inp_sys.stdout.flush()
-		sys.exit()
+		self.inp_sys.exit()
 
 
 	# add to bin
@@ -88,7 +132,7 @@ class server:
 		if not isinstance(dat, bytes):
 			raise Exception('Cant add anything besides bytes to output buffer')
 
-		self.bin += dat
+		self.sv_buffer += dat
 
 	# spit file
 	def x_files(self, flpath, flname):
@@ -115,14 +159,14 @@ class server:
 	@property
 	def auth_db(self):
 		db_pt = self.Pathl(self.sv_cfg['auth_db_loc'])
-		db_obj = json.loads(db_pt.read_bytes())
+		db_obj = self.json.loads(db_pt.read_bytes())
 		return server_logpswd_db(db_obj, db_pt)
 
 	# allowance, like admin and modules
 	@property
 	def alw_db(self):
 		db_pt = self.Pathl(self.sv_cfg['clearance_db'])
-		db_obj = json.loads(db_pt.read_bytes())
+		db_obj = self.json.loads(db_pt.read_bytes())
 		return server_allowance_db(db_obj, db_pt)
 
 

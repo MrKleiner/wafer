@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 import cgi, sys, cgitb
-sys.path.append('.')
+sys.path.append('..')
 from server import server
 server = server(cgi, sys, cgitb)
 
@@ -30,7 +29,7 @@ class user_ctrl:
 		for usr in server.auth_db.db:
 			users.append({
 				'login': usr,
-				'pswd': user_db[usr]['pswd']
+				'pswd': server.auth_db.db[usr]['pswd']
 			})
 
 		# return json.dumps(users)
@@ -99,6 +98,26 @@ class user_ctrl:
 		return server.util.eval_hash('!lizard?'.join([str(random.random()) for rnd in range(64)]), 'sha256')
 
 
+	# Load access definition list
+	# Again, no tokens on purpose
+	def load_access_list(self):
+		import json
+
+		# collapse token clearance and nicknames into a single dict
+		clr_dict = {}
+
+		clearance_db = server.alw_db.db
+		user_db = server.auth_db.db
+
+		for usr in user_db:
+			clr_dict[usr] = clearance_db[user_db[usr]['token']]
+
+		server.bin_write(json.dumps(clr_dict).encode())
+		server.flush()
+
+
+
+
 
 usr_ctrl = user_ctrl(server.prms.get('auth'))
 
@@ -106,4 +125,7 @@ usr_ctrl = user_ctrl(server.prms.get('auth'))
 
 if server.prms.get('action') == 'get_user_list':
 	usr_ctrl.get_user_list()
+if server.prms.get('action') == 'load_access_list':
+	usr_ctrl.load_access_list()
+
 

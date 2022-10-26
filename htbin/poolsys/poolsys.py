@@ -1,4 +1,7 @@
-from dataclasses import dataclass, field
+import cgi, sys, cgitb
+sys.path.append('..')
+from server import server
+server = server(cgi, sys, cgitb)
 
 
 # @dataclass(frozen=True, order=True)
@@ -9,106 +12,68 @@ class poolsys:
 	# data: str | bytes = b''
 	# server info, stuff like server root
 	# server: dict = field(default_factory=dict)
-	def __init__(self, prms={}, dt='', sv={}):
-		import json
-		from pathlib import Path
-
-		self.prms = prms
-		self.data = dt
-		self.server = sv
-		self.sysroot = Path(json.loads((sv['root'] / 'db' / 'root.json').read_bytes())['root_path'])
-
-		self.allowed_vid = [
-			'mp4',
-			'mov',
-			'webm',
-			'ts',
-			'mts',
-			'mkv',
-			'avi'
-		]
-
-		self.allowed_img = [
-			'jpg',
-			'jpeg',
-			'jp2',
-			'j2k',
-			'png',
-			'tif',
-			'tiff',
-			'tga',
-			'webp',
-			'psd',
-			'apng',
-			'gif',
-			'avif',
-			'bmp',
-			'dib',
-			'raw',
-			'arw',
-			'jfif',
-			'jif',
-			'hdr'
-		]
+	def __init__(self):
+		# import json
+		# from pathlib import Path
+		self.aa = 'aa'
 
 
-	@property
+	# @property
 	def list_leagues(self):
 		import json
-		from pathlib import Path
 
-		return json.dumps([fld.name for fld in self.sysroot.glob('*') if fld.is_dir()])
+		server.bin_write(json.dumps([fld.name for fld in server.sys_root.glob('*') if fld.is_dir()]).encode())
+		# server.bin_write(str(server.sys_root).encode())
+		server.flush()
 
 
-	@property
+	# @property
 	def list_matches_w_subroot(self):
 		import json
-		from pathlib import Path
-		try:
-			mws = {}
 
-			for cmd in self.sysroot.glob('*'):
-				if not cmd.is_dir():
-					continue
+		mws = {}
+		for cmd in server.sys_root.glob('*'):
+			if not cmd.is_dir():
+				continue
+			mws[cmd.name] = [match.name for match in cmd.glob('*') if match.is_dir()]
 
-				mws[cmd.name] = [match.name for match in cmd.glob('*') if match.is_dir()]
-
-			return json.dumps(mws)
-		except Exception as e:
-			return json.dumps({})
+		server.bin_write(json.dumps(mws).encode())
+		server.flush()
 
 
-	@property
+
+	# @property
 	def list_league_matches(self):
 		import json
 		from pathlib import Path
 
-		if not self.prms['league_name']:
+		if not server.prms['league_name']:
 			return []
 
-		return json.dumps([fld.name for fld in (self.sysroot / Path(self.prms['league_name'])).glob('*') if fld.is_dir()])
+		server.bin_write(json.dumps([fld.name for fld in (server.sys_root / Path(server.prms['league_name'])).glob('*') if fld.is_dir()]).encode())
+		server.flush()
 
 
-	@property
+	# @property
 	def list_match_struct(self):
 		import json
 		from pathlib import Path
 
-		return json.dumps([fld.name for fld in (self.sysroot / Path(self.prms['match_name'])).glob('*') if fld.is_dir()])
+		server.bin_write(json.dumps([fld.name for fld in (server.sys_root / Path(server.prms['match_name'])).glob('*') if fld.is_dir()]).encode())
+		server.flush()
 
-
-	@property
+	# @property
 	def list_media(self):
 		import json, os
 		from pathlib import Path
 
 		matches = []
 
-		for match in (self.sysroot / Path(self.prms['target'])).glob('*'):
+		for match in (server.sys_root / Path(server.prms['target'])).glob('*'):
 			if match.is_dir():
 				continue
 
-			if match.suffix.strip('.').lower() in self.allowed_vid:
+			if match.suffix.strip('.').lower() in server.allowed_vid:
 				matches.append({
 					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
 					'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
@@ -117,7 +82,7 @@ class poolsys:
 					'flname': match.name
 				})
 				continue
-			if match.suffix.strip('.').lower() in self.allowed_img:
+			if match.suffix.strip('.').lower() in server.allowed_img:
 				matches.append({
 					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*20) else False),
 					'stats': f"""{((1024**2)*20)}/{os.stat(str(match)).st_size}""",
@@ -134,35 +99,37 @@ class poolsys:
 				'path': str(match),
 				'flname': match.name
 			})
-		
-		return json.dumps(matches)
+
+		server.bin_write(json.dumps(matches).encode())
+		server.flush()
 
 
-	@property
+	# @property
 	def list_files(self):
 		return []
 
-	@property
+	# @property
 	def load_media_preview(self):
 		import json
 		from pathlib import Path
 		import subprocess as sp
 
-		tgt_path = Path(self.prms['media_path'])
+		tgt_path = Path(server.prms['media_path'])
 
-		if tgt_path.suffix.strip('.').lower() in self.allowed_vid:
+		if tgt_path.suffix.strip('.').lower() in server.allowed_vid:
 			# return self.generate_vid_preview
 			return 'videofile'
 
-		if not tgt_path.suffix.strip('.').lower() in self.allowed_img:
+		if not tgt_path.suffix.strip('.').lower() in server.allowed_img:
 			return 'regular file'.encode()
 
 		# if this file exists in the previews pool - get it and return immediately
 		preview_path = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
 		if preview_path.is_file():
-			return preview_path.read_bytes()
+			# return preview_path.read_bytes()
+			server.x_files(preview_path, preview_path.name)
 
-		# create dir if doesn't exist
+		# create dir if it doesn't exist
 		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
 
 		ffmpeg_prms = [
@@ -218,23 +185,24 @@ class poolsys:
 		preview_path.write_bytes(webp)
 
 		# return str(self.prms['media_path']).encode()
-		return webp
+		server.bin_write(webp)
+		server.flush()
 		# return (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp').read_bytes()
 		# return tgt_path.read_bytes()
 
 
-	@property
+	# @property
 	def load_fullres_pic(self):
 		from pathlib import Path
 		import os
-		if os.stat(self.prms['target']).st_size > ((1024**2)*100):
+		if os.stat(server.prms['target']).st_size > ((1024**2)*50):
 			return 'file is too big'.encode()
 
-		return Path(self.prms['target']).read_bytes()
+		server.x_files(server.prms['target'], 'preview')
 	
 
 	# obvious todo: hardcoded 100 frames = bad
-	@property
+	# @property
 	def generate_vid_preview(self):
 		import sys, json
 		import subprocess as sp
@@ -366,9 +334,27 @@ class poolsys:
 		return (prdb / 'temp_shite' / f'{preview_name}.chad').read_bytes()
 
 
-	@property
+	# @property
 	def load_lfs(self):
 		rt = b''
 		rt += f"""Content-Disposition: attachment; filename="{self.prms['lfs_name']}"\r\n""".encode()
 		rt += f"""X-Sendfile: {self.prms['lfs']}\r\n\r\n""".encode()
 		return rt
+
+
+pool_sys = poolsys()
+pool_sys_available = {
+	'list_leagues': 		pool_sys.list_leagues,
+	'list_league_matches': 	pool_sys.list_league_matches,
+	'list_match_struct': 	pool_sys.list_match_struct,
+	'list_media': 			pool_sys.list_media,
+	'load_media_preview': 	pool_sys.load_media_preview,
+	'load_fullres_pic': 	pool_sys.load_fullres_pic
+}
+
+rq_action = server.prms.get('action')
+if rq_action in pool_sys_available:
+	pool_sys_available[rq_action]()
+else:
+	server.bin_write('invalid action')
+	server.flush()

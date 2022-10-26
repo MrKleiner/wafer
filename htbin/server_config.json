@@ -6,5 +6,5 @@
 	// database with previews and a temp dir
 	"preview_db": "/raid/btg_prdb",
 	// root of the target file system
-	"system_root": "/raid/basketftp"
+	"system_root": "/home/basket/scotland"
 }

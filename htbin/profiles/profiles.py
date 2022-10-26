@@ -1,6 +1,5 @@
-#!/usr/bin/python3
 import cgi, sys, cgitb
-sys.path.append('.')
+sys.path.append('..')
 from server import server
 server = server(cgi, sys, cgitb)
 
@@ -15,6 +14,8 @@ class profiling:
 
 		# evaluate server database
 		authdb = server.auth_db.db
+
+		prms = server.prms
 
 		username_fromdb = authdb.get(prms['username'])
 
@@ -34,12 +35,12 @@ class profiling:
 			server.flush()
 
 
-profiler = user_ctrl(server.prms.get('auth'))
+profiler = profiling()
 
 
 
-if url_params.get('action') == 'login':
-	profiling.login()
+if server.prms.get('action') == 'login':
+	profiler.login()
 
 
 

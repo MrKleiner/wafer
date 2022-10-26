@@ -28,8 +28,9 @@ window.bootlegger.main_pool.load_root_dir = async function()
 {
 	// list root shite
 	const roots = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_leagues'
+			'action': 'list_leagues'
 		},
 		'json'
 	)
@@ -62,8 +63,9 @@ window.bootlegger.main_pool.list_league_matches = async function(elm)
 	const full_root = (await window.bootlegger.core.load_dbfile('root.json', 'json'))['root_path']
 
 	const subroot_flds = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_league_matches',
+			'action': 'list_league_matches',
 			'league_name': fld_name
 		},
 		'json'
@@ -105,8 +107,9 @@ window.bootlegger.main_pool.list_match_struct = async function(elm)
 	window.bootlegger.main_pool.update_vis_path()
 
 	const dirlisting = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_match_struct',
+			'action': 'list_match_struct',
 			'match_name': `${window.league}/${window.league_match}`
 		},
 		'json'
@@ -149,8 +152,9 @@ window.bootlegger.main_pool.list_media = async function(elm=null, manual=false)
 	window.bootlegger.main_pool.update_vis_path()
 
 	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_media',
+			'action': 'list_media',
 			'target': `${window.league}/${window.league_match}/${window.struct_fld}`
 		},
 		'json'
@@ -174,13 +178,14 @@ window.bootlegger.main_pool.list_media = async function(elm=null, manual=false)
 		// stupid
 		// load preview first
 		var media_preview = await window.bootlegger.core.py_get(
+			'poolsys/poolsys',
 			{
-				'action': 'poolsys.load_media_preview',
+				'action': 'load_media_preview',
 				'media_path': lst['path']
 			},
 			'blob_url'
 		)
-		// print(media_preview)
+		print(media_preview)
 		// return
 		if (lst['lfs'] == true){
 			const urlParams = new URLSearchParams({
@@ -310,8 +315,9 @@ window.bootlegger.main_pool.load_fullres_media = async function(elm)
 	$('body').append(tgt)
 
 	const fullres = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.load_fullres_pic',
+			'action': 'load_fullres_pic',
 			'target': media_path
 		},
 		'blob_url'

@@ -77,7 +77,7 @@ def giga_json(inp, bt=False):
 	else:
 		jspath = Path(inp)
 		if not jspath.is_file():
-			raise Exception('Path passed to giga_json does not exist')
+			raise Exception(f'Path passed to giga_json does not exist, {str(jspath)}')
 		jsb = jspath.read_bytes()
 
 	return json.loads(b'\n'.join([ln for ln in jsb.split(b'\n') if not ln.strip().startswith(b'//')]))

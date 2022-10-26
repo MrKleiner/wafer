@@ -15,8 +15,9 @@ window.bootlegger.admin.load_module = async function()
 
 	// load users
 	const users = await window.bootlegger.core.py_get(
+		'admin/admin',
 		{
-			'action': 'list_users'
+			'action': 'get_user_list'
 		},
 		'json'
 	)
@@ -87,6 +88,7 @@ window.bootlegger.admin.load_module = async function()
 window.bootlegger.admin.load_acl_list = async function()
 {
 	const allowance =  await window.bootlegger.core.py_get(
+		'admin/admin',
 		{
 			'action': 'load_access_list'
 		},

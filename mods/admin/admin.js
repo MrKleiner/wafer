@@ -11,8 +11,9 @@ $this.load_module = async function()
 
 	// load users
 	const users = await $all.core.py_get(
+		'admin/admin',
 		{
-			'action': 'list_users'
+			'action': 'get_user_list'
 		},
 		'json'
 	)
@@ -83,6 +84,7 @@ $this.load_module = async function()
 $this.load_acl_list = async function()
 {
 	const allowance =  await $all.core.py_get(
+		'admin/admin',
 		{
 			'action': 'load_access_list'
 		},
