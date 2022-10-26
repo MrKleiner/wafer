@@ -1,6 +1,6 @@
 import cgi, sys, cgitb
 sys.path.append('..')
-from server import server
+from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 
@@ -117,15 +117,71 @@ class user_ctrl:
 
 
 
+	# Save access list
+	def save_access_list(self):
+		from pathlib import Path
+		import json
+
+		# evaluate input as json
+		input_cl = json.loads(server.bin)
+
+		clearance_db = server.alw_db.db
+		user_db = server.auth_db.db
+
+		for usr in input_cl:
+			clearance_db[user_db[usr]['token']]['folders'] = input_cl[usr]['folders']
+			clearance_db[user_db[usr]['token']]['admin'] = input_cl[usr]['admin']
+
+		server.alw_db.path.write_bytes(json.dumps(clearance_db).encode())
+
+		server.bin_write(json.dumps({'status': 'ok', 'details': 're-wrote allowance db'}).encode())
+		server.flush()
+
+
+
+
+	# spawn struct with photos, videos n stuff
+	def spawn_match_struct(self):
+		import json
+
+		sysroot = server.sys_root
+		prms = server.prms
+
+		# check whether the team exists or nah
+		if not (sysroot / prms['team']).is_dir():
+			server.bin_write(json.dumps({'status': 'fail', 'reason': 'requested team does not exist', 'details': str(sysroot / prms['team'])}).encode())
+			server.flush()
+
+		# now check for duplicate folders
+		if (sysroot / prms['team'] / prms['newfld']).is_dir():
+			server.bin_write(json.dumps({'status': 'fail', 'reason': 'duplicate names', 'details': str(sysroot / prms['team'] / prms['newfld'])}).encode())
+			server.flush() 
+
+		# finally, create the folder WITH subfolders n shit
+		tgt_match = (sysroot / prms['team'] / prms['newfld'])
+		tgt_match.mkdir()
+		(tgt_match / 'video').mkdir()
+		(tgt_match / 'photo').mkdir()
+		(tgt_match / 'moments').mkdir()
+		(tgt_match / 'pressa').mkdir()
+
+		server.bin_write(json.dumps({'status': 'all_good'}).encode())
+		server.flush()
+
+
+
 
 
 usr_ctrl = user_ctrl(server.prms.get('auth'))
 
-
-
-if server.prms.get('action') == 'get_user_list':
-	usr_ctrl.get_user_list()
-if server.prms.get('action') == 'load_access_list':
-	usr_ctrl.load_access_list()
-
-
+actions = md_actions(
+	server, 
+	{
+		'get_user_list': 		usr_ctrl.get_user_list,
+		'save_user_profiles': 	usr_ctrl.save_user_profiles,
+		'load_access_list': 	usr_ctrl.load_access_list,
+		'spawn_match_struct': 	usr_ctrl.spawn_match_struct,
+		'save_access_list': 	usr_ctrl.save_access_list
+	}
+)
+actions.eval_action()

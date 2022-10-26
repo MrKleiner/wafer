@@ -172,3 +172,18 @@ class server:
 
 
 
+
+class md_actions:
+	"""Actions"""
+	def __init__(self, sv, registry={}):
+		self.reg = registry
+		self.srv = sv
+		self.action = sv.prms.get('action')
+
+	def eval_action(self):
+		# if action from url params is in the registry then execute
+		if self.action in self.reg:
+			self.reg[self.action]()
+		else:
+			self.srv.bin_write('invalid action')
+			self.srv.flush()

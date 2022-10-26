@@ -1,6 +1,6 @@
 import cgi, sys, cgitb
 sys.path.append('..')
-from server import server
+from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 
@@ -209,14 +209,21 @@ class poolsys:
 		from pathlib import Path
 		sys.path.append('.')
 		from gigabin_py import gigabin
-		from util import eval_hash, even_points
-		return
+		# from util import eval_hash, even_points
+		# return
 
-		prdb = Path(self.server['cfg']['preview_db'])
 
-		tgt_vid = Path(self.prms['media_path'])
+		#
+		# ffmpeg.exe -i "C:\Users\baton\Downloads\hacker-1-5.mp4" -vf select="eq(n\,10)+eq(n\,27)+eq(n\,31)" -vsync 0 -c:v libwebp -f image2 -lossless 0 -compression_level 6 -qscale 50 "C:\custom\other\ffmpeg_test\hax%d.webp"
+		#
+
+
+
+		prdb = server.preview_db
+
+		tgt_vid = Path(server.prms['media_path'])
 		# todo: also evaluate file checksum ?
-		preview_name = eval_hash(str(tgt_vid), 'sha256')
+		preview_name = server.util.eval_hash(str(tgt_vid), 'sha256')
 
 		# ---------------------------
 		# extract all frames
@@ -277,25 +284,26 @@ class poolsys:
 			'-i', str(tgt_vid),
 
 			# filters
-			# '-vf', ("""select='""" + '+'.join([f'eq(n\\,{int(frnum)})' for frnum in even_points(1,vid_fr_count,3)]) + """'"""),
-			'-vf', """select='eq(n\\,100)+eq(n\\,184)+eq(n\\,213)'""",
-
+			'-vf', ("""select='""" + '+'.join([f'eq(n\\,{int(frnum)})' for frnum in server.util.even_points(1,vid_fr_count,100)]) + """'"""),
+			# '-vf', """select='eq(n\\,100)+eq(n\\,184)+eq(n\\,213)'""",
+			'-vsync', '0',
 			# compression
-			'-c:v', 'webp',
+			'-c:v', 'libwebp',
 
 			'-lossless', '0',
 			'-compression_level', '6',
-			'-qscale', '50',
+			'-qscale', '40',
+			'-vsync', '0',
 			# output
 			str(prdb / 'temp_shite' / f'{preview_name}%d.webp')
 		]
 		# extract frames to a temp location on raid
 		# todo: the output doesn't really has to be captured
-		# echo_sh = None
-		# with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-		# 	echo_sh = img_pipe.stdout.read()
+		echo_sh = None
+		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+			echo_sh = img_pipe.stdout.read()
 
-		sp.run(ffmpeg_prms)
+		# sp.run(ffmpeg_prms)
 
 		# return 'fuckoff'.encode()
 
@@ -305,7 +313,7 @@ class poolsys:
 		chad = gigabin((prdb / 'temp_shite' / f'{preview_name}.chad'), True)
 
 		# add previews one by one
-		for giga in range(3):
+		for giga in range(100):
 			giga_name = (prdb / 'temp_shite' / f'{preview_name}{giga+1}.webp')
 			chad.add_solid(
 				f'frn{giga+1}',
@@ -313,7 +321,7 @@ class poolsys:
 				False
 			)
 			# delete file afterwards
-			# giga_name.unlink(missing_ok=True)
+			giga_name.unlink(missing_ok=True)
 
 
 		index_json = {
@@ -331,7 +339,8 @@ class poolsys:
 
 
 		# finally, return gigabin with all the previews
-		return (prdb / 'temp_shite' / f'{preview_name}.chad').read_bytes()
+		# return (prdb / 'temp_shite' / f'{preview_name}.chad').read_bytes()
+		server.x_files((prdb / 'temp_shite' / f'{preview_name}.chad'), 'video_preview')
 
 
 	# @property
@@ -343,18 +352,18 @@ class poolsys:
 
 
 pool_sys = poolsys()
-pool_sys_available = {
-	'list_leagues': 		pool_sys.list_leagues,
-	'list_league_matches': 	pool_sys.list_league_matches,
-	'list_match_struct': 	pool_sys.list_match_struct,
-	'list_media': 			pool_sys.list_media,
-	'load_media_preview': 	pool_sys.load_media_preview,
-	'load_fullres_pic': 	pool_sys.load_fullres_pic
-}
 
-rq_action = server.prms.get('action')
-if rq_action in pool_sys_available:
-	pool_sys_available[rq_action]()
-else:
-	server.bin_write('invalid action')
-	server.flush()
+actions = md_actions(
+	server,
+	{
+		'list_leagues': 			pool_sys.list_leagues,
+		'list_league_matches': 		pool_sys.list_league_matches,
+		'list_match_struct': 		pool_sys.list_match_struct,
+		'list_media': 				pool_sys.list_media,
+		'load_media_preview': 		pool_sys.load_media_preview,
+		'load_fullres_pic': 		pool_sys.load_fullres_pic,
+		'generate_vid_preview': 	pool_sys.generate_vid_preview,
+		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot
+	}
+)
+actions.eval_action()

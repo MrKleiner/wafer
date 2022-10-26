@@ -4,7 +4,7 @@
 	// database with user allowance
 	"clearance_db": "/home/basket/web_db/ctrl_clearance.json",
 	// database with previews and a temp dir
-	"preview_db": "/raid/btg_prdb",
+	"preview_db": "/home/basket/pr_db",
 	// root of the target file system
 	"system_root": "/home/basket/scotland"
 }

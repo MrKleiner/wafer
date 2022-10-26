@@ -45,8 +45,9 @@ $this.load_module = async function()
 
 	// supposedly, root listing is also a list of all the commands
 	const cmds = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_leagues'
+			'action': 'list_leagues'
 		},
 		'json'
 	)
@@ -321,8 +322,9 @@ $this.eval_match_name_hint = function()
 $this.load_folder_makers = async function()
 {
 	const teams = await $all.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_matches_w_subroot'
+			'action': 'list_matches_w_subroot'
 		},
 		'json'
 	)
@@ -361,6 +363,7 @@ $this.spawn_match_struct = async function()
 	}
 	$this.selected_team_f = $('#foldmaker_pool .team.selected_team').attr('tmname')
 	const spawn_reply = await $all.core.py_get(
+		'admin/admin',
 		{
 			'action': 'spawn_match_struct',
 			'team': $this.selected_team_f,

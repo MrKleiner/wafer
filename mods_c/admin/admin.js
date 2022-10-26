@@ -49,8 +49,9 @@ window.bootlegger.admin.load_module = async function()
 
 	// supposedly, root listing is also a list of all the commands
 	const cmds = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_leagues'
+			'action': 'list_leagues'
 		},
 		'json'
 	)
@@ -325,8 +326,9 @@ window.bootlegger.admin.eval_match_name_hint = function()
 window.bootlegger.admin.load_folder_makers = async function()
 {
 	const teams = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
 		{
-			'action': 'poolsys.list_matches_w_subroot'
+			'action': 'list_matches_w_subroot'
 		},
 		'json'
 	)
@@ -365,6 +367,7 @@ window.bootlegger.admin.spawn_match_struct = async function()
 	}
 	window.bootlegger.admin.selected_team_f = $('#foldmaker_pool .team.selected_team').attr('tmname')
 	const spawn_reply = await window.bootlegger.core.py_get(
+		'admin/admin',
 		{
 			'action': 'spawn_match_struct',
 			'team': window.bootlegger.admin.selected_team_f,
