@@ -199,7 +199,7 @@ window.bootlegger.core.py_get = async function(mod='', prms={}, load_as='text')
 // prms: URL parameters to pass to the CGI script
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-window.bootlegger.core.py_send = async function(prms={}, payload='', load_as='text')
+window.bootlegger.core.py_send = async function(mod='', prms={}, payload='', load_as='text')
 {
 	// add auth token to the payload
 	prms['auth'] = window.localStorage.getItem('auth_token') || 'ftp';
@@ -212,7 +212,7 @@ window.bootlegger.core.py_send = async function(prms={}, payload='', load_as='te
 
 	// exec...
 	return new Promise(function(resolve, reject){
-		fetch(`htbin/gateway.py?${urlParams.toString()}`, {
+		fetch(`htbin/${mod}.py?${urlParams.toString()}`, {
 			'headers': {
 				'accept': '*/*',
 				'cache-control': 'no-cache',

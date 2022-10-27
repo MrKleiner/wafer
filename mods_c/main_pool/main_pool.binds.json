@@ -89,5 +89,14 @@
 			"pass_element": true,
 			"pass_params": ""
 		}
+	],
+	"mousemove": [
+		{
+			"selector": "flist-entry etype[vid]",
+			"function": "window.bootlegger.main_pool.vidscroll",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
+		}
 	]
 }

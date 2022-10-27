@@ -4,30 +4,23 @@ from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 
-# @dataclass(frozen=True, order=True)
 class poolsys:
-	# parameters passed as through URL params
-	# prms: dict = field(default_factory=dict)
-	# data passed through the request
-	# data: str | bytes = b''
-	# server info, stuff like server root
-	# server: dict = field(default_factory=dict)
+
 	def __init__(self):
 		# import json
 		# from pathlib import Path
 		self.aa = 'aa'
 
 
-	# @property
+
 	def list_leagues(self):
 		import json
 
-		server.bin_write(json.dumps([fld.name for fld in server.sys_root.glob('*') if fld.is_dir()]).encode())
+		server.bin_jwrite([fld.name for fld in server.sys_root.glob('*') if fld.is_dir()])
 		# server.bin_write(str(server.sys_root).encode())
 		server.flush()
 
 
-	# @property
 	def list_matches_w_subroot(self):
 		import json
 
@@ -37,12 +30,11 @@ class poolsys:
 				continue
 			mws[cmd.name] = [match.name for match in cmd.glob('*') if match.is_dir()]
 
-		server.bin_write(json.dumps(mws).encode())
+		server.bin_jwrite(mws)
 		server.flush()
 
 
 
-	# @property
 	def list_league_matches(self):
 		import json
 		from pathlib import Path
@@ -50,19 +42,19 @@ class poolsys:
 		if not server.prms['league_name']:
 			return []
 
-		server.bin_write(json.dumps([fld.name for fld in (server.sys_root / Path(server.prms['league_name'])).glob('*') if fld.is_dir()]).encode())
+		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['league_name'])).glob('*') if fld.is_dir()])
 		server.flush()
 
 
-	# @property
+
 	def list_match_struct(self):
 		import json
 		from pathlib import Path
 
-		server.bin_write(json.dumps([fld.name for fld in (server.sys_root / Path(server.prms['match_name'])).glob('*') if fld.is_dir()]).encode())
+		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['match_name'])).glob('*') if fld.is_dir()])
 		server.flush()
 
-	# @property
+
 	def list_media(self):
 		import json, os
 		from pathlib import Path
@@ -100,44 +92,28 @@ class poolsys:
 				'flname': match.name
 			})
 
-		server.bin_write(json.dumps(matches).encode())
+		server.bin_jwrite(matches)
 		server.flush()
 
 
-	# @property
+
 	def list_files(self):
 		return []
 
-	# @property
-	def load_media_preview(self):
-		import json
-		from pathlib import Path
+	# generate a lowres preview of a static image
+	def generate_pic_preview(self, img_path=None):
 		import subprocess as sp
 
-		tgt_path = Path(server.prms['media_path'])
-
-		if tgt_path.suffix.strip('.').lower() in server.allowed_vid:
-			# return self.generate_vid_preview
-			return 'videofile'
-
-		if not tgt_path.suffix.strip('.').lower() in server.allowed_img:
-			return 'regular file'.encode()
-
-		# if this file exists in the previews pool - get it and return immediately
-		preview_path = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
-		if preview_path.is_file():
-			# return preview_path.read_bytes()
-			server.x_files(preview_path, preview_path.name)
-
-		# create dir if it doesn't exist
-		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
+		img_path = Path(img_path)
+		if not img_path.is_file():
+			raise Exception('generate_pic_preview: image does not exist under the specified file path')
 
 		ffmpeg_prms = [
 			# mpeg
 			'/usr/bin/ffmpeg',
 			# input
 			# '-i', str(engines / pl['img']),
-			'-i', str(tgt_path),
+			'-i', str(img_path),
 			# resize
 			# '-hwaccel', 'cuda',
 			# '-hwaccel_output_format', 'cuda',
@@ -174,181 +150,255 @@ class poolsys:
 			# str(tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
 		]
 
-
 		# webp = subprocess.run(ffmpeg_prms, capture_output=True)
 		webp = None
 		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
 			# myFile.write(img_pipe.stdout.read())
 			webp = img_pipe.stdout.read()
 
-		# Save preview
+		return webp
+
+	# basically an image preview gateway
+	def load_image_preview(self):
+		import json
+		from pathlib import Path
+
+		# target image filepath
+		tgt_path = Path(server.prms['image_path'])
+
+		# if requested file is not of supported format - return error
+		if not tgt_path.suffix.strip('.').lower() in server.allowed_img:
+			server.flush('Requested files does not match any supported image formats'.encode())
+
+		# if this file exists in the previews pool - get it and return immediately
+		preview_path = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
+		if preview_path.is_file():
+			server.x_files(preview_path, preview_path.name)
+
+		# create the folder with previews if it doesn't exist
+		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
+
+		# generate the preview
+		webp = self.generate_pic_preview()
+
+		# Save preview to the preview folder
 		preview_path.write_bytes(webp)
 
-		# return str(self.prms['media_path']).encode()
-		server.bin_write(webp)
-		server.flush()
-		# return (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp').read_bytes()
-		# return tgt_path.read_bytes()
+		# return webp bytes to the client
+		server.flush(webp)
 
 
-	# @property
-	def load_fullres_pic(self):
+	# just like with videos - a gateway...
+	# todo: separate this stuff into a special class ?
+	def load_video_preview(self):
 		from pathlib import Path
+		import shutil
+
+		# target video filepath
+		tgt_path = Path(server.prms['video_path'])
+
+		# if requested file is not of supported format - return error
+		if not tgt_path.suffix.strip('.').lower() in server.allowed_vid:
+			server.flush('Requested files does not match any supported video formats'.encode())
+		
+		# if this file exists in the previews pool - get it and return immediately
+		preview_path = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.chad')
+		if preview_path.is_file():
+			server.x_files(preview_path, preview_path.name)
+
+		# else - generate preview
+		# create the folder with previews if it doesn't exist
+		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
+
+		# start generating preview
+		rum = self.generate_vid_preview(tgt_path)
+
+		# move the preview to the previews folder
+		newloc = tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.chad'
+		shutil.move(str(rum), str(newloc))
+
+		# send generated file to client
+		server.x_files(newloc, newloc.name)
+
+
+
+
+	def load_fullres_pic(self):
+		# from pathlib import Path
 		import os
 		if os.stat(server.prms['target']).st_size > ((1024**2)*50):
 			return 'file is too big'.encode()
 
 		server.x_files(server.prms['target'], 'preview')
-	
+
 
 	# obvious todo: hardcoded 100 frames = bad
-	# @property
-	def generate_vid_preview(self):
+	# takes video path as an inout
+	def generate_vid_preview(self, vidpath):
 		import sys, json
 		import subprocess as sp
 		from pathlib import Path
 		sys.path.append('.')
 		from gigabin_py import gigabin
-		# from util import eval_hash, even_points
-		# return
-
-
 		#
 		# ffmpeg.exe -i "C:\Users\baton\Downloads\hacker-1-5.mp4" -vf select="eq(n\,10)+eq(n\,27)+eq(n\,31)" -vsync 0 -c:v libwebp -f image2 -lossless 0 -compression_level 6 -qscale 50 "C:\custom\other\ffmpeg_test\hax%d.webp"
 		#
 
-
-
+		# preview db location
 		prdb = server.preview_db
-
-		tgt_vid = Path(server.prms['media_path'])
+		# target video location
+		# tgt_vid = Path(server.prms['media_path'])
+		tgt_vid = Path(vidpath)
+		if not tgt_vid.is_file():
+			raise Exception('generate_vid_preview: video does not exist under the specified file path')
 		# todo: also evaluate file checksum ?
-		preview_name = server.util.eval_hash(str(tgt_vid), 'sha256')
+		# preview_name = server.util.eval_hash(str(tgt_vid), 'sha256')
+		# the hash of the video is also its preview name, for now
+		# inp_video_hash = server.util.hash_file(str(tgt_vid), 'sha256')
+		preview_file_name = server.util.hash_file(str(tgt_vid), 'sha256')
 
-		# ---------------------------
-		# extract all frames
-		# ---------------------------
-
-
-		#
-		# first, get resolution of the video
-		#
-
-		# ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 input.mp4
-		ffprobe_prms = [
-			'/usr/bin/ffprobe',
-			'-v', 'error',
-			'-select_streams', 'v:0',
-			'-show_entries', 'stream=width,height',
-			'-of', 'csv=s=x:p=0',
-			str(tgt_vid)
-		]
-		vid_res = None
-		with sp.Popen(ffprobe_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-			pipe_data = img_pipe.stdout.read().decode().split('x')
-			vid_res = (int(pipe_data[0]), int(pipe_data[1]))
+		# todo: create a quick table of frame extraction amount
+		# aka 1hr video = 200 frames, 10 minute video = 50 frames ...
 
 
-		#
-		# then, get frame count
-		#
 
-		# todo: previous example has some cool selection (no need for json shit)
-		# important todo: combine this wit the previous command
-		# ffprobe -v error -select_streams v:0 -count_frames -show_entries stream=nb_read_frames -print_format csv
+
+		# ==========================================================
+		# first, get resolution and frame count of the video
+		# ==========================================================
+
+		# ffprobe.exe -v error -select_streams 0 -count_frames -show_entries stream=nb_read_frames,width,height -print_format json "C:\Users\baton\Downloads\hacker-1-5.mp4"
 		ffprobe_prms = [
 			'/usr/bin/ffprobe',
 			'-v', 'error',
 			'-select_streams', 'v:0',
 			'-count_frames',
 			'-show_entries',
-			'stream=nb_read_frames',
+			'stream=nb_read_frames,width,height',
 			'-print_format', 'json',
 			str(tgt_vid)
 		]
+		vid_res = None
 		vid_fr_count = None
-		with sp.Popen(ffprobe_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-			vid_fr_count = int(json.loads(img_pipe.stdout.read())['streams'][0]['nb_read_frames'])
+		with sp.Popen(ffprobe_prms, stdout=sp.PIPE, bufsize=10**8) as img_info_pipe:
+			# read output of the ffprobe
+			vid_info = json.loads(img_info_pipe.stdout.read())['streams'][0]
+			# save resolution XY
+			vid_res = (int(vid_info['width']), int(vid_info['height']))
+			vid_fr_count = int(vid_info['nb_read_frames'])
 
 
 
-		#
-		# now, construct ffmpeg params for frames extraction
-		#
 
-		# ffmpeg -i in.mp4 -vf select='eq(n\,100)+eq(n\,184)+eq(n\,213)' -vsync 0 frames%d.jpg
+
+
+
+		# ==========================================================
+		# Now, construct ffmpeg params for frames extraction and execute frame extraction
+		# ==========================================================
+
+		# frame selection filter
+		frame_nums = '+'.join([f'eq(n\\,{int(frnum)})' for frnum in server.util.even_points(1,vid_fr_count,100)])
+		# ffmpeg execution params
+		# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
 		ffmpeg_prms = [
-			# executable
+			# ffmpeg executable
 			'/usr/bin/ffmpeg',
-			# input
+			
+			# input file
 			'-i', str(tgt_vid),
 
-			# filters
-			'-vf', ("""select='""" + '+'.join([f'eq(n\\,{int(frnum)})' for frnum in server.util.even_points(1,vid_fr_count,100)]) + """'"""),
-			# '-vf', """select='eq(n\\,100)+eq(n\\,184)+eq(n\\,213)'""",
+			# filters: frame selection and width clamping
+			'-vf', f"""select='{frame_nums}', scale='w=min(iw\\,400):h=-2'""",
+			# this is a VERY important option, without this all frames of the videos are extracted
 			'-vsync', '0',
+
 			# compression
 			'-c:v', 'libwebp',
 
 			'-lossless', '0',
 			'-compression_level', '6',
-			'-qscale', '40',
-			'-vsync', '0',
-			# output
-			str(prdb / 'temp_shite' / f'{preview_name}%d.webp')
+			'-qscale', '20',
+
+			# output file location
+			str(prdb / 'temp_shite' / f'{preview_file_name}%d.btgsystmp.webp')
 		]
-		# extract frames to a temp location on raid
-		# todo: the output doesn't really has to be captured
+
+		# extract frames to a temp location
+		# todo: the output of this command doesn't really has to be captured
+		# because ffmpeg puts frames into corresponding location by itself
 		echo_sh = None
-		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-			echo_sh = img_pipe.stdout.read()
+		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as frame_ext_echo:
+			echo_sh = frame_ext_echo.stdout.read()
 
+		# todo: there's a million fucking ways to run shit...
 		# sp.run(ffmpeg_prms)
+		# server.flush(' '.join(ffmpeg_prms).encode())
 
-		# return 'fuckoff'.encode()
 
-		#
+
+
+
+		# ===============================================
 		# collapse frames and info into a gigabin
-		#
-		chad = gigabin((prdb / 'temp_shite' / f'{preview_name}.chad'), True)
+		# ===============================================
 
-		# add previews one by one
-		for giga in range(100):
-			giga_name = (prdb / 'temp_shite' / f'{preview_name}{giga+1}.webp')
+		# init new gigabin
+		chad_location = prdb / 'temp_shite' / f'{preview_file_name}.chad'
+		chad = gigabin(chad_location, True)
+
+		# add frames to gigabin one by one
+		for vframe in range(100):
+			# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
+			giga_name = (prdb / 'temp_shite' / f'{preview_file_name}{vframe+1}.btgsystmp.webp')
 			chad.add_solid(
-				f'frn{giga+1}',
-				giga_name.read_bytes(),
-				False
+				fname 		= f'frn{vframe+1}',
+				data 		= giga_name.read_bytes(),
+				overwrite 	= False,
+				dohash 		= False
 			)
 			# delete file afterwards
 			giga_name.unlink(missing_ok=True)
 
-
+		# write down info about this preview bin
 		index_json = {
+			# video dimensions
 			'dimensions': vid_res,
+			# frame count
+			'frame_count': vid_fr_count,
+			# test
 			'lizards': 'sexy',
-			'debug': str(prdb / 'temp_shite' / f'{preview_name}{1}.webp')
+			# 'debug': str(prdb / 'temp_shite' / f'{preview_file_name}{1}.webp')
 		}
-
-		# write info
+		# add this json to gigabin
 		chad.add_solid(
-			'index',
-			json.dumps(index_json).encode(),
-			True
+			fname 		= 'index',
+			data 		= json.dumps(index_json).encode(),
+			overwrite 	= True,
+			dohash 		= False
 		)
 
 
 		# finally, return gigabin with all the previews
 		# return (prdb / 'temp_shite' / f'{preview_name}.chad').read_bytes()
-		server.x_files((prdb / 'temp_shite' / f'{preview_name}.chad'), 'video_preview')
+		# server.x_files((prdb / 'temp_shite' / f'{preview_file_name}.chad'), 'video_preview')
+
+		# return path to the .chad file
+		return chad_location
 
 
-	# @property
-	def load_lfs(self):
-		rt = b''
-		rt += f"""Content-Disposition: attachment; filename="{self.prms['lfs_name']}"\r\n""".encode()
-		rt += f"""X-Sendfile: {self.prms['lfs']}\r\n\r\n""".encode()
-		return rt
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 pool_sys = poolsys()
@@ -360,9 +410,10 @@ actions = md_actions(
 		'list_league_matches': 		pool_sys.list_league_matches,
 		'list_match_struct': 		pool_sys.list_match_struct,
 		'list_media': 				pool_sys.list_media,
-		'load_media_preview': 		pool_sys.load_media_preview,
+		'load_image_preview': 		pool_sys.load_image_preview,
 		'load_fullres_pic': 		pool_sys.load_fullres_pic,
-		'generate_vid_preview': 	pool_sys.generate_vid_preview,
+		'load_video_preview': 		pool_sys.load_video_preview,
+		# 'generate_vid_preview': 	pool_sys.generate_vid_preview,
 		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot
 	}
 )

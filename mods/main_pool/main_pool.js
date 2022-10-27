@@ -15,13 +15,29 @@ $this.set_flist_view_type = function(tp='list')
 
 $this.module_loader = async function()
 {
+	print('start loading mpool')
 	await $all.core.sysloader('main_pool', true);
-	$this.load_root_dir()
-
+	await $this.load_root_dir(false)
+	await $this.go_dir_path()
 }
 
-$this.load_root_dir = async function()
+$this.go_dir_path = async function()
 {
+	print('go dir path')
+	const urlParams = new URLSearchParams(window.location.search);
+	const load_loc = urlParams.get('f');
+	const paths = load_loc.trim().strip('/').split('/')
+
+	paths[0] ? (await $this.list_league_matches(paths[0])) : null
+	print('godir 1')
+	paths[1] ? (await $this.list_match_struct(paths[1])) : null
+	print('godir 2')
+	paths[2] ? (await $this.list_media(paths[2])) : null
+}
+
+$this.load_root_dir = async function(doup=true)
+{
+	print('mpool load root dir')
 	// list root shite
 	const roots = await $all.core.py_get(
 		'poolsys/poolsys',
@@ -30,9 +46,10 @@ $this.load_root_dir = async function()
 		},
 		'json'
 	)
+	print('mpool loaded root dir')
 
 	print('fuck this shit', roots)
-	$this.update_vis_path()
+	doup ? $this.update_vis_path() : null
 
 	$('mpool flist').empty();
 	$this.set_flist_view_type('list');
@@ -49,9 +66,10 @@ $this.load_root_dir = async function()
 }
 
 
-$this.list_league_matches = async function(elm)
+$this.list_league_matches = async function(elm='')
 {
-	const fld_name = elm.getAttribute('fldname');
+	print('mpool list matches')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
 
 	window.league = fld_name;
 	$this.update_vis_path()
@@ -92,12 +110,13 @@ $this.list_league_matches = async function(elm)
 }
 
 
-$this.list_match_struct = async function(elm)
+$this.list_match_struct = async function(elm='')
 {
+	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
 	// and not just some random shit
 	$this.dirlisting = [];
-	const fld_name = elm.getAttribute('fldpath');
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
 
 	window.league_match = fld_name;
 	$this.update_vis_path()
@@ -139,13 +158,149 @@ $this.list_match_struct = async function(elm)
 
 
 
-$this.list_media = async function(elm=null, manual=false)
+
+
+
+
+
+$this.video_bins = {}
+// important todo: it looks like if an element with image url exists - it's being precached
+// what are the limits of this ?
+// how many elements at once can be precached ?
+$this.vidframes_cache = []
+$this.spawn_video_unit = async function(vpath)
 {
-	
-	const fld_name = manual ? manual : elm.getAttribute('fldpath');
+	return new Promise(async function(resolve, reject){
+
+		const fname = vpath.split('/').at(-1).trim()
+		const unit_id = lizard.rndwave(32, 'def')
+
+		const video_entry = $(`
+			<flist-entry unit_id="${unit_id}" class="media_entry lfs_entry" flpath="${vpath}" flname="${fname}">
+				<etype style="background-image: url(./assets/spinning_circle.svg)" vid>
+				</etype>
+				<ename>${fname}</ename>
+			</flist-entry>
+		`)
+		$('mpool flist').append(video_entry)
+
+		const video_preview = await $all.core.py_get(
+			'poolsys/poolsys',
+			{
+				'action': 'load_video_preview',
+				'video_path': vpath
+			},
+			'buffer'
+		)
+		
+		const preview_bin = new window.gigabin(video_preview)
+		$this.video_bins[unit_id] = []
+		for (var frame of range(100)){
+			const imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
+			$this.video_bins[unit_id].push(imgu)
+			$this.vidframes_cache.push(await $this.await_img_load(imgu))
+		}
+		video_entry.find('etype')[0].style.backgroundImage = `url(${$this.video_bins[unit_id][0]})`
+		resolve(true)
+
+	});
+}
+
+$this.flush_preview_frames = function()
+{
+	for (var rv in $this.video_bins){
+		for (var fr of $this.video_bins[rv]){
+			(window.URL || window.webkitURL).revokeObjectURL(fr)
+		}
+	}
+	for (var rv of $this.vidframes_cache){
+		(window.URL || window.webkitURL).revokeObjectURL(rv)
+	}
+}
+
+// todo: collapse another multiplier
+$this.vidscroll = function(evt, etgt)
+{
+	// Get bbox relative to viewport
+	const pr_id = etgt.closest('flist-entry').getAttribute('unit_id')
+	const rect = etgt.getBoundingClientRect()
+	// Mouse position relative to element
+	const current_x = Math.abs(evt.clientX - rect.left);
+	// current / total = current percent progress
+	const scroll = int(100 * (current_x / rect.width))
+	etgt.style.backgroundImage = `url(${$this.video_bins[pr_id][scroll]})`
+}
+
+
+$this.spawn_image_unit = async function(imgpath)
+{
+	return new Promise(async function(resolve, reject){
+		// todo: the split solution is just rubbish
+		const fname = imgpath.split('/').at(-1).trim()
+		const media_entry = $(`
+			<flist-entry class="media_entry" flpath="${imgpath}" flname="${fname}">
+				<etype style="background-image: url(./assets/spinning_circle.svg)" img>
+				</etype>
+				<ename>${fname}</ename>
+			</flist-entry>
+		`)
+
+		$('mpool flist').append(media_entry)
+
+		const img_preview = await $all.core.py_get(
+			'poolsys/poolsys',
+			{
+				'action': 'load_image_preview',
+				'image_path': imgpath
+			},
+			'blob_url'
+		)
+
+		print(img_preview)
+
+		media_entry.find('etype')[0].style.backgroundImage = `url(${img_preview})`
+
+		resolve(true)
+
+	});
+}
+
+$this.spawn_file_unit = function(flpath)
+{
+	return
+	const urlParams = new URLSearchParams({
+		'action': 'get_lfs',
+		'auth': 'ftp',
+		'lfs_name': lst['flname'],
+		'lfs': lst['path']
+	});
+	var media_entry = $(`
+		<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
+			<etype file>
+			</etype>
+			<ename>${lst['flname']}</ename>
+		</flist-entry>
+	`)
+}
+
+
+
+
+
+
+
+
+
+
+
+$this.list_media = async function(elm='')
+{
+	print('mpool list media')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
 
 	window.struct_fld = fld_name;
 	$this.update_vis_path()
+	$this.flush_preview_frames()
 
 	$this.dirlisting = await $all.core.py_get(
 		'poolsys/poolsys',
@@ -170,63 +325,21 @@ $this.list_media = async function(elm=null, manual=false)
 	`)
 
 	for (var lst of $this.dirlisting){
-		console.time('Media Unit')
-		// stupid
-		// load preview first
-		var media_preview = await $all.core.py_get(
-			'poolsys/poolsys',
-			{
-				'action': 'load_media_preview',
-				'media_path': lst['path']
-			},
-			'blob_url'
-		)
-		print(media_preview)
-		// return
-		if (lst['lfs'] == true){
-			const urlParams = new URLSearchParams({
-				'action': 'get_lfs',
-				'auth': 'ftp',
-				'lfs_name': lst['flname'],
-				'lfs': lst['path']
-			});
-			var media_entry = $(`
-				<flist-entry class="media_entry lfs_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-					<etype novid>
-					</etype>
-					<a class="ename" href="htbin/lfs.py?${urlParams.toString()}">${lst['flname']}</a>
-				</flist-entry>
-			`)
-		}else{
-			if (lst['etype'] == 'file'){
-				var media_entry = $(`
-					<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-						<etype file>
-						</etype>
-						<ename>${lst['flname']}</ename>
-					</flist-entry>
-				`)
-			}else{
-				var media_entry = $(`
-					<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-						<etype style="background-image: url(${media_preview})" img>
-						</etype>
-						<ename>${lst['flname']}</ename>
-					</flist-entry>
-				`)
-			}
-
-		}
-
-
-		$('mpool flist').append(media_entry);
-
-		// important todo: this kinda works, but it'd be better to have a system for this
 		if ($this.dirlisting.length <= 0){return}
 
-		// load preview
-		console.timeEnd('Media Unit')
 
+		if (lst['etype'] == 'img'){
+			await $this.spawn_image_unit(lst['path'])
+		}
+
+		if (lst['etype'] == 'vid'){
+			await $this.spawn_video_unit(lst['path'])
+		}
+
+		// $('mpool flist').append(media_entry);
+
+		// important todo: this kinda works, but it'd be better to have a system for this
+		
 	}
 
 	$this.dirlisting = []
@@ -383,13 +496,20 @@ $this.clear_media_dl_queue = function()
 $this.update_vis_path = function()
 {
 	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
-	$('#mpool_tobpar #vispath').text(
+	const cpath = (
 		(window.league ? (window.league + '/') : '')
 		+
 		(window.league_match ? (window.league_match + '/') : '')
 		+
 		(window.struct_fld ? (window.struct_fld + '/') : '')
 	)
+	$('#mpool_tobpar #vispath').text(cpath)
+
+	// url
+	print('update url')
+	var queryParams = new URLSearchParams(window.location.search);
+	queryParams.set('f', cpath);
+	history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
 }
 
 

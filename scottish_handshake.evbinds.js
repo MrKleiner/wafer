@@ -132,3 +132,16 @@ document.addEventListener('keydown', tr_event => {
 });
 
 
+document.addEventListener('mousemove', tr_event => {
+
+
+	// ==========================================
+	// 	main_pool main_pool
+	// ==========================================
+
+	if (event.target.closest('flist-entry etype[vid]')){window.bootlegger.main_pool.vidscroll(tr_event, event.target.closest('flist-entry etype[vid]'))}
+
+
+});
+
+

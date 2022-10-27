@@ -19,13 +19,29 @@ window.bootlegger.main_pool.set_flist_view_type = function(tp='list')
 
 window.bootlegger.main_pool.module_loader = async function()
 {
+	print('start loading mpool')
 	await window.bootlegger.core.sysloader('main_pool', true);
-	window.bootlegger.main_pool.load_root_dir()
-
+	await window.bootlegger.main_pool.load_root_dir(false)
+	await window.bootlegger.main_pool.go_dir_path()
 }
 
-window.bootlegger.main_pool.load_root_dir = async function()
+window.bootlegger.main_pool.go_dir_path = async function()
 {
+	print('go dir path')
+	const urlParams = new URLSearchParams(window.location.search);
+	const load_loc = urlParams.get('f');
+	const paths = load_loc.trim().strip('/').split('/')
+
+	paths[0] ? (await window.bootlegger.main_pool.list_league_matches(paths[0])) : null
+	print('godir 1')
+	paths[1] ? (await window.bootlegger.main_pool.list_match_struct(paths[1])) : null
+	print('godir 2')
+	paths[2] ? (await window.bootlegger.main_pool.list_media(paths[2])) : null
+}
+
+window.bootlegger.main_pool.load_root_dir = async function(doup=true)
+{
+	print('mpool load root dir')
 	// list root shite
 	const roots = await window.bootlegger.core.py_get(
 		'poolsys/poolsys',
@@ -34,9 +50,10 @@ window.bootlegger.main_pool.load_root_dir = async function()
 		},
 		'json'
 	)
+	print('mpool loaded root dir')
 
 	print('fuck this shit', roots)
-	window.bootlegger.main_pool.update_vis_path()
+	doup ? window.bootlegger.main_pool.update_vis_path() : null
 
 	$('mpool flist').empty();
 	window.bootlegger.main_pool.set_flist_view_type('list');
@@ -53,9 +70,10 @@ window.bootlegger.main_pool.load_root_dir = async function()
 }
 
 
-window.bootlegger.main_pool.list_league_matches = async function(elm)
+window.bootlegger.main_pool.list_league_matches = async function(elm='')
 {
-	const fld_name = elm.getAttribute('fldname');
+	print('mpool list matches')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
 
 	window.league = fld_name;
 	window.bootlegger.main_pool.update_vis_path()
@@ -96,12 +114,13 @@ window.bootlegger.main_pool.list_league_matches = async function(elm)
 }
 
 
-window.bootlegger.main_pool.list_match_struct = async function(elm)
+window.bootlegger.main_pool.list_match_struct = async function(elm='')
 {
+	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
 	// and not just some random shit
 	window.bootlegger.main_pool.dirlisting = [];
-	const fld_name = elm.getAttribute('fldpath');
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
 
 	window.league_match = fld_name;
 	window.bootlegger.main_pool.update_vis_path()
@@ -143,13 +162,149 @@ window.bootlegger.main_pool.list_match_struct = async function(elm)
 
 
 
-window.bootlegger.main_pool.list_media = async function(elm=null, manual=false)
+
+
+
+
+
+window.bootlegger.main_pool.video_bins = {}
+// important todo: it looks like if an element with image url exists - it's being precached
+// what are the limits of this ?
+// how many elements at once can be precached ?
+window.bootlegger.main_pool.vidframes_cache = []
+window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 {
-	
-	const fld_name = manual ? manual : elm.getAttribute('fldpath');
+	return new Promise(async function(resolve, reject){
+
+		const fname = vpath.split('/').at(-1).trim()
+		const unit_id = lizard.rndwave(32, 'def')
+
+		const video_entry = $(`
+			<flist-entry unit_id="${unit_id}" class="media_entry lfs_entry" flpath="${vpath}" flname="${fname}">
+				<etype style="background-image: url(./assets/spinning_circle.svg)" vid>
+				</etype>
+				<ename>${fname}</ename>
+			</flist-entry>
+		`)
+		$('mpool flist').append(video_entry)
+
+		const video_preview = await window.bootlegger.core.py_get(
+			'poolsys/poolsys',
+			{
+				'action': 'load_video_preview',
+				'video_path': vpath
+			},
+			'buffer'
+		)
+		
+		const preview_bin = new window.gigabin(video_preview)
+		window.bootlegger.main_pool.video_bins[unit_id] = []
+		for (var frame of range(100)){
+			const imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
+			window.bootlegger.main_pool.video_bins[unit_id].push(imgu)
+			window.bootlegger.main_pool.vidframes_cache.push(await window.bootlegger.main_pool.await_img_load(imgu))
+		}
+		video_entry.find('etype')[0].style.backgroundImage = `url(${window.bootlegger.main_pool.video_bins[unit_id][0]})`
+		resolve(true)
+
+	});
+}
+
+window.bootlegger.main_pool.flush_preview_frames = function()
+{
+	for (var rv in window.bootlegger.main_pool.video_bins){
+		for (var fr of window.bootlegger.main_pool.video_bins[rv]){
+			(window.URL || window.webkitURL).revokeObjectURL(fr)
+		}
+	}
+	for (var rv of window.bootlegger.main_pool.vidframes_cache){
+		(window.URL || window.webkitURL).revokeObjectURL(rv)
+	}
+}
+
+// todo: collapse another multiplier
+window.bootlegger.main_pool.vidscroll = function(evt, etgt)
+{
+	// Get bbox relative to viewport
+	const pr_id = etgt.closest('flist-entry').getAttribute('unit_id')
+	const rect = etgt.getBoundingClientRect()
+	// Mouse position relative to element
+	const current_x = Math.abs(evt.clientX - rect.left);
+	// current / total = current percent progress
+	const scroll = int(100 * (current_x / rect.width))
+	etgt.style.backgroundImage = `url(${window.bootlegger.main_pool.video_bins[pr_id][scroll]})`
+}
+
+
+window.bootlegger.main_pool.spawn_image_unit = async function(imgpath)
+{
+	return new Promise(async function(resolve, reject){
+		// todo: the split solution is just rubbish
+		const fname = imgpath.split('/').at(-1).trim()
+		const media_entry = $(`
+			<flist-entry class="media_entry" flpath="${imgpath}" flname="${fname}">
+				<etype style="background-image: url(./assets/spinning_circle.svg)" img>
+				</etype>
+				<ename>${fname}</ename>
+			</flist-entry>
+		`)
+
+		$('mpool flist').append(media_entry)
+
+		const img_preview = await window.bootlegger.core.py_get(
+			'poolsys/poolsys',
+			{
+				'action': 'load_image_preview',
+				'image_path': imgpath
+			},
+			'blob_url'
+		)
+
+		print(img_preview)
+
+		media_entry.find('etype')[0].style.backgroundImage = `url(${img_preview})`
+
+		resolve(true)
+
+	});
+}
+
+window.bootlegger.main_pool.spawn_file_unit = function(flpath)
+{
+	return
+	const urlParams = new URLSearchParams({
+		'action': 'get_lfs',
+		'auth': 'ftp',
+		'lfs_name': lst['flname'],
+		'lfs': lst['path']
+	});
+	var media_entry = $(`
+		<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
+			<etype file>
+			</etype>
+			<ename>${lst['flname']}</ename>
+		</flist-entry>
+	`)
+}
+
+
+
+
+
+
+
+
+
+
+
+window.bootlegger.main_pool.list_media = async function(elm='')
+{
+	print('mpool list media')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
 
 	window.struct_fld = fld_name;
 	window.bootlegger.main_pool.update_vis_path()
+	window.bootlegger.main_pool.flush_preview_frames()
 
 	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_get(
 		'poolsys/poolsys',
@@ -174,63 +329,21 @@ window.bootlegger.main_pool.list_media = async function(elm=null, manual=false)
 	`)
 
 	for (var lst of window.bootlegger.main_pool.dirlisting){
-		console.time('Media Unit')
-		// stupid
-		// load preview first
-		var media_preview = await window.bootlegger.core.py_get(
-			'poolsys/poolsys',
-			{
-				'action': 'load_media_preview',
-				'media_path': lst['path']
-			},
-			'blob_url'
-		)
-		print(media_preview)
-		// return
-		if (lst['lfs'] == true){
-			const urlParams = new URLSearchParams({
-				'action': 'get_lfs',
-				'auth': 'ftp',
-				'lfs_name': lst['flname'],
-				'lfs': lst['path']
-			});
-			var media_entry = $(`
-				<flist-entry class="media_entry lfs_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-					<etype novid>
-					</etype>
-					<a class="ename" href="htbin/lfs.py?${urlParams.toString()}">${lst['flname']}</a>
-				</flist-entry>
-			`)
-		}else{
-			if (lst['etype'] == 'file'){
-				var media_entry = $(`
-					<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-						<etype file>
-						</etype>
-						<ename>${lst['flname']}</ename>
-					</flist-entry>
-				`)
-			}else{
-				var media_entry = $(`
-					<flist-entry class="media_entry" flpath="${lst['path']}" flname="${lst['flname']}">
-						<etype style="background-image: url(${media_preview})" img>
-						</etype>
-						<ename>${lst['flname']}</ename>
-					</flist-entry>
-				`)
-			}
-
-		}
-
-
-		$('mpool flist').append(media_entry);
-
-		// important todo: this kinda works, but it'd be better to have a system for this
 		if (window.bootlegger.main_pool.dirlisting.length <= 0){return}
 
-		// load preview
-		console.timeEnd('Media Unit')
 
+		if (lst['etype'] == 'img'){
+			await window.bootlegger.main_pool.spawn_image_unit(lst['path'])
+		}
+
+		if (lst['etype'] == 'vid'){
+			await window.bootlegger.main_pool.spawn_video_unit(lst['path'])
+		}
+
+		// $('mpool flist').append(media_entry);
+
+		// important todo: this kinda works, but it'd be better to have a system for this
+		
 	}
 
 	window.bootlegger.main_pool.dirlisting = []
@@ -387,13 +500,20 @@ window.bootlegger.main_pool.clear_media_dl_queue = function()
 window.bootlegger.main_pool.update_vis_path = function()
 {
 	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
-	$('#mpool_tobpar #vispath').text(
+	const cpath = (
 		(window.league ? (window.league + '/') : '')
 		+
 		(window.league_match ? (window.league_match + '/') : '')
 		+
 		(window.struct_fld ? (window.struct_fld + '/') : '')
 	)
+	$('#mpool_tobpar #vispath').text(cpath)
+
+	// url
+	print('update url')
+	var queryParams = new URLSearchParams(window.location.search);
+	queryParams.set('f', cpath);
+	history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
 }
 
 

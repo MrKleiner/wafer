@@ -7,15 +7,15 @@ server = server(cgi, sys, cgitb)
 # this entire class requires admin
 class user_ctrl:
 	"""User control, like password control and account creation"""
-	
+
 	# init usually means auth
 	def __init__(self, auth=None):
 		if not server.alw_db.db.get(auth):
-			server.bin_write(json.dumps({'status': '1809246/missing'}).encode())
+			server.bin_jwrite({'status': '1809246/missing'})
 			server.flush()
 
 		if not 'admin' in server.alw_db.db[auth]:
-			server.bin_write(json.dumps({'status': '1809246/hobo'}).encode())
+			server.bin_jwrite({'status': '1809246/hobo'})
 			server.flush()
 
 
@@ -33,7 +33,7 @@ class user_ctrl:
 			})
 
 		# return json.dumps(users)
-		server.bin_write(json.dumps(users).encode())
+		server.bin_jwrite(users)
 		server.flush()
 
 
@@ -45,12 +45,12 @@ class user_ctrl:
 		import json
 
 		# original database
-		old_db_loc = auth_db.path
-		old_db = auth_db.db
+		old_db_loc = server.auth_db.path
+		old_db = server.auth_db.db
 
 		# don't forget to update allowance db
-		cldb_loc = alw_db.path
-		cldb = alw_db.db
+		cldb_loc = server.alw_db.path
+		cldb = server.alw_db.db
 
 		# new users db
 		new_db = {}
@@ -66,7 +66,7 @@ class user_ctrl:
 			if not old_db.get(usr):
 				# important todo: this is absolutely fucking retarded
 				# generate random access token
-				super_token = self.generate_token()
+				super_token = server.util.generate_token()
 
 				new_db[usr] = {
 					'pswd': inp_db[usr],
@@ -88,15 +88,8 @@ class user_ctrl:
 		old_db_loc.write_bytes(json.dumps(new_db, indent=4).encode())
 		cldb_loc.write_bytes(json.dumps(new_cl_db, indent=4).encode())
 
-		server.bin_write(json.dumps({'status': 'ok', 'details': 're-wrote user databases'}).encode())
+		server.bin_jwrite({'status': 'ok', 'details': 're-wrote user databases'})
 		server.flush()
-
-
-	# generate random token
-	def generate_token(self):
-		import random
-		return server.util.eval_hash('!lizard?'.join([str(random.random()) for rnd in range(64)]), 'sha256')
-
 
 	# Load access definition list
 	# Again, no tokens on purpose
@@ -112,12 +105,13 @@ class user_ctrl:
 		for usr in user_db:
 			clr_dict[usr] = clearance_db[user_db[usr]['token']]
 
-		server.bin_write(json.dumps(clr_dict).encode())
+		server.bin_jwrite(clr_dict)
 		server.flush()
 
 
 
-	# Save access list
+	# Load access definition list
+	# Again, no tokens on purpose
 	def save_access_list(self):
 		from pathlib import Path
 		import json
@@ -125,6 +119,9 @@ class user_ctrl:
 		# evaluate input as json
 		input_cl = json.loads(server.bin)
 
+		# new_clr_dict = {}
+
+		cl_db_path = server.alw_db.path
 		clearance_db = server.alw_db.db
 		user_db = server.auth_db.db
 
@@ -132,12 +129,21 @@ class user_ctrl:
 			clearance_db[user_db[usr]['token']]['folders'] = input_cl[usr]['folders']
 			clearance_db[user_db[usr]['token']]['admin'] = input_cl[usr]['admin']
 
-		server.alw_db.path.write_bytes(json.dumps(clearance_db).encode())
+		cl_db_path.write_bytes(json.dumps(clearance_db).encode())
 
-		server.bin_write(json.dumps({'status': 'ok', 'details': 're-wrote allowance db'}).encode())
+		server.bin_write('Saved allowance pool')
 		server.flush()
 
 
+
+
+# this entire class requires admin
+class struct_ctrl:
+	"""File struct control, like spawning new folders"""
+
+	def __init__(self):
+
+		self.aa = 'bb'
 
 
 	# spawn struct with photos, videos n stuff
@@ -173,15 +179,20 @@ class user_ctrl:
 
 
 usr_ctrl = user_ctrl(server.prms.get('auth'))
+# this is very risky
+# make auth check a separate class
+file_ctrl = struct_ctrl()
 
 actions = md_actions(
 	server, 
 	{
+		# user control
 		'get_user_list': 		usr_ctrl.get_user_list,
 		'save_user_profiles': 	usr_ctrl.save_user_profiles,
 		'load_access_list': 	usr_ctrl.load_access_list,
-		'spawn_match_struct': 	usr_ctrl.spawn_match_struct,
-		'save_access_list': 	usr_ctrl.save_access_list
+		'save_access_list': 	usr_ctrl.save_access_list,
+		# File struct control
+		'spawn_match_struct': 	file_ctrl.spawn_match_struct
 	}
 )
 actions.eval_action()

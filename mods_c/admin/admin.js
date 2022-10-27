@@ -209,6 +209,7 @@ window.bootlegger.admin.save_user_profiles = async function()
 	}
 
 	const do_send = await window.bootlegger.core.py_send(
+		'admin/admin',
 		{
 			'action': 'save_user_profiles'
 		},

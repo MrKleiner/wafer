@@ -268,7 +268,7 @@ class gigabin:
 
 
 	# add solid block
-	def add_solid(self, fname=None, data=None, overwrite=True):
+	def add_solid(self, fname=None, data=None, overwrite=True, dohash=True):
 		import os
 		if None in (fname, data):
 			raise Exception('Invalid info passed to add_solid')
@@ -303,7 +303,11 @@ class gigabin:
 		# update header before adding requested data
 		self.header['stores'][fname] = {}
 		self.header['stores'][fname]['type'] = 'solid'
-		self.header['stores'][fname]['bits'] = (chad.tell() - self.head_len, len(data), None)
+		# eval hash, if asked
+		p_hash = None
+		if dohash == True:
+			p_hash = self.eval_hash(data, 'sha256')
+		self.header['stores'][fname]['bits'] = (chad.tell() - self.head_len, len(data), p_hash)
 
 		# append requested data
 		chad.write(data)
@@ -319,6 +323,67 @@ class gigabin:
 		# close
 		chad.close()
 
+
+
+
+
+
+
+
+
+
+	# RAM-Efficient
+	# applicable entries are: md5/sha256/sha512
+	def hash_file(self, filepath=None, meth='md5', mb_read=100):
+		import hashlib
+		from pathlib import Path
+
+		if filepath == None or not Path(filepath).is_file():
+			return False
+
+		file = str(filepath) # Location of the file (can be set a different way)
+
+		# The size of each read from the file
+		# default: 65535
+		BLOCK_SIZE = (1024**2)*mb_read
+		
+		# Create the hash object, can use something other than `.sha256()` if you wish
+		file_hash = hashlib.md5()
+		if meth == 'sha256':
+			file_hash = hashlib.sha256()
+		if meth == 'sha512':
+			file_hash = hashlib.sha512()
+
+		with open(file, 'rb') as f: # Open the file to read it's bytes
+			fb = f.read(BLOCK_SIZE) # Read from the file. Take in the amount declared above
+			while len(fb) > 0: # While there is still data being read from the file
+				file_hash.update(fb) # Update the hash
+				fb = f.read(BLOCK_SIZE) # Read the next block from the file
+
+		return(file_hash.hexdigest()) # Get the hexadecimal digest of the hash
+
+
+
+	# fast
+	# takes bytes or strings as an input
+	# hash 
+	# htype: md5/sha256/sha512
+	def eval_hash(self, dt_input, htype='md5'):
+		import hashlib
+
+		if isinstance(dt_input, bytes):
+			hasher = dt_input
+		else:
+			text = str(dt_input)
+			hasher = text.encode()
+
+		hash_obj = hashlib.md5(hasher)
+		if htype == 'sha256':
+			hash_obj = hashlib.sha256(hasher)
+		if htype == 'sha512':
+			hash_obj = hashlib.sha512(hasher)
+
+		return hash_obj.hexdigest()
 
 
 

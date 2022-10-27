@@ -6,9 +6,9 @@ from random import seed
 from random import random
 
 # MODULES
-from vidman.vidman import *
-from profiles.login import *
-from profiles.profiler import *
+# from vidman.vidman import *
+# from profiles.login import *
+# from profiles.profiler import *
 from poolsys.poolsys import *
 from ft.upload import *
 # cgitb.enable()

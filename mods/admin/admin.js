@@ -205,6 +205,7 @@ $this.save_user_profiles = async function()
 	}
 
 	const do_send = await $all.core.py_send(
+		'admin/admin',
 		{
 			'action': 'save_user_profiles'
 		},

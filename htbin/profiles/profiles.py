@@ -1,6 +1,6 @@
 import cgi, sys, cgitb
 sys.path.append('..')
-from server import server
+from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 # basic stuff like login
@@ -35,12 +35,16 @@ class profiling:
 			server.flush()
 
 
+
+
+
+
 profiler = profiling()
 
-
-
-if server.prms.get('action') == 'login':
-	profiler.login()
-
-
-
+actions = md_actions(
+	server,
+	{
+		'login': profiler.login
+	}
+)
+actions.eval_action()

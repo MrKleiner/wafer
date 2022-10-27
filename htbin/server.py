@@ -104,6 +104,14 @@ class server:
 			'hdr'
 		]
 
+		self.allowed_img_special = [
+			'tga',
+			'psd',
+			'arw',
+			'raw',
+			'hdr'
+		]
+
 
 	# @property
 	# def tr_type(self):
@@ -115,7 +123,10 @@ class server:
 
 
 	# spit shit
-	def flush(self):
+	# pass bytes to first add these bytes to the buffer and THEN flush
+	def flush(self, add_b=None):
+		if add_b:
+			self.bin_write(add_b)
 		# general info
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
@@ -134,17 +145,21 @@ class server:
 
 		self.sv_buffer += dat
 
+	# add json to bin
+	def bin_jwrite(self, jsn):
+		self.sv_buffer += self.json.dumps(jsn).encode()
+
+
 	# spit file
 	def x_files(self, flpath, flname):
-		from pathlib import Path
 
 		if not flpath or not flname:
-			raise Exception('x_files transfer one of the arguments is completely invalid')
+			raise Exception('x_files transfer: one of the arguments is completely invalid')
 
-		floc = Path(flpath)
+		floc = self.Pathl(flpath)
 
 		if not floc.is_file():
-			raise Exception('x_files transfer file path does not exist')
+			raise Exception('x_files transfer: file path does not exist')
 
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n'.encode())
 		self.inp_sys.stdout.buffer.write(f"""Content-Disposition: attachment; filename="{str(flname)}"\r\n""".encode())
@@ -185,5 +200,5 @@ class md_actions:
 		if self.action in self.reg:
 			self.reg[self.action]()
 		else:
-			self.srv.bin_write('invalid action')
+			self.srv.bin_write('invalid action'.encode())
 			self.srv.flush()

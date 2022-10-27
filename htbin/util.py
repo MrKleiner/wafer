@@ -1,4 +1,15 @@
 
+# =============================================
+# 				Util finctions
+# =============================================
+
+
+
+
+
+
+
+
 # RAM-Efficient
 # applicable entries are: md5/sha256/sha512
 def hash_file(filepath=None, meth='md5', mb_read=100):
@@ -82,3 +93,13 @@ def giga_json(inp, bt=False):
 
 	return json.loads(b'\n'.join([ln for ln in jsb.split(b'\n') if not ln.strip().startswith(b'//')]))
 
+
+
+# generate random token
+# pass True to generate a super long token (sha512)
+def generate_token(do_long=False):
+	from random import random
+	if do_long == True:
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(64)]), 'sha512')
+	else:
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(64)]), 'sha256')
