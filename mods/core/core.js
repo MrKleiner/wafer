@@ -109,7 +109,46 @@ $this.sysloader = async function(sysname=null, static=false)
 	});
 }
 
+$this.browser_detection = function()
+{
+	// Get the user-agent string
+	let userAgentString = navigator.userAgent;
 
+	// Detect Chrome
+	let chromeAgent = userAgentString.indexOf('Chrome') > -1;
+
+	// Detect Internet Explorer
+	let IExplorerAgent = userAgentString.indexOf('MSIE') > -1 || userAgentString.indexOf('rv:') > -1;
+
+	// Detect Firefox
+	let firefoxAgent = userAgentString.indexOf('Firefox') > -1;
+
+	// Detect Safari
+	let safariAgent = userAgentString.indexOf('Safari') > -1;
+
+	// Discard Safari since it also matches Chrome
+	if ((chromeAgent) && (safariAgent)){
+		safariAgent = false;
+	}
+
+	// Detect Opera
+	let operaAgent = userAgentString.indexOf('OP') > -1;
+
+	// Discard Chrome since it also matches Opera     
+	if ((chromeAgent) && (operaAgent)){
+		chromeAgent = false;
+	}
+
+	if (safariAgent == true){
+		$('body').html(`
+			<div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center">
+				<h1 style="color: white">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!<h1>
+				<img style="width: 100%; height: 50%; object-fit: contain; object-position: center;" src="./assets/fuck_safari.webp">
+			</div>
+		`);
+	}
+
+}
 
 $(document).ready(function(){
 	$all.main_pool.module_loader();
