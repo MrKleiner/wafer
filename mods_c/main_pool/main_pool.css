@@ -272,16 +272,22 @@ mpool[grid] flist flist-entry etype
 }
 
 
-mpool[grid] flist flist-entry ename, mpool[grid] flist flist-entry a.ename
+mpool[grid] flist flist-entry ename
 {
 	/*display: flex;*/
-	 display: block; 
+	display: block; 
 	align-items: center;
 	/* font-size: 20px; */
 	font-size: 1.2vw;
 	text-overflow: ellipsis;
 	overflow: hidden;
 	text-align: center;
+	padding: 2px;
+}
+
+mpool[grid] flist flist-entry.folder ename
+{
+	user-select: none;
 }
 
 
@@ -290,6 +296,7 @@ mpool[grid] flist flist-entry.folder:hover
 	background: rgba(255, 255, 255, 0.04);
 	border-radius: 5px;
 }
+
 
 mpool[grid] flist flist-entry.folder:active
 {
@@ -414,4 +421,52 @@ mpool dlq .dlq_item.lfs_item .lfs_progress
 dlq #dlq_title, dlq #dlq_head
 {
 	padding: 10px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*VIS PATH*/
+
+#vispath
+{
+	display: flex;
+}
+
+
+#vispath .vispath_fld, #vispath .vispath_separator
+{
+	display: flex;
+	padding: 4px;
+}
+
+#vispath .vispath_separator
+{
+	user-select: none;
+}
+
+#vispath .vispath_fld
+{
+	user-select: none;
+	border-radius: 4px;
+}
+
+#vispath .vispath_fld:hover
+{
+	background: rgba(255, 255, 255, 0.05);
+}
+
+#vispath .vispath_fld:active
+{
+	outline: 1px solid lime;
+	background: rgba(255, 255, 255, 0.1);
 }

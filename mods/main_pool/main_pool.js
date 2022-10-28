@@ -1,4 +1,7 @@
 
+$this.dirlisting = []
+
+
 $this.set_flist_view_type = function(tp='list')
 {
 	if (tp == 'list'){
@@ -28,16 +31,20 @@ $this.go_dir_path = async function()
 	const load_loc = urlParams.get('f');
 	const paths = load_loc.trim().strip('/').split('/')
 
-	paths[0] ? (await $this.list_league_matches(paths[0])) : null
+	paths[1] ? (await $this.list_league_matches(paths[1])) : null
 	print('godir 1')
-	paths[1] ? (await $this.list_match_struct(paths[1])) : null
+	paths[2] ? (await $this.list_match_struct(paths[2])) : null
 	print('godir 2')
-	paths[2] ? (await $this.list_media(paths[2])) : null
+	paths[3] ? (await $this.list_media(paths[3])) : null
 }
+
+
+
 
 $this.load_root_dir = async function(doup=true)
 {
 	print('mpool load root dir')
+	$this.media_units_iteration.kill()
 	// list root shite
 	const roots = await $all.core.py_get(
 		'poolsys/poolsys',
@@ -50,6 +57,7 @@ $this.load_root_dir = async function(doup=true)
 
 	print('fuck this shit', roots)
 	doup ? $this.update_vis_path() : null
+	// $this.update_vis_path()
 
 	$('mpool flist').empty();
 	$this.set_flist_view_type('list');
@@ -68,11 +76,13 @@ $this.load_root_dir = async function(doup=true)
 
 $this.list_league_matches = async function(elm='')
 {
+	$this.media_units_iteration.kill()
 	print('mpool list matches')
 	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
 
 	window.league = fld_name;
 	$this.update_vis_path()
+
 
 	const full_root = (await $all.core.load_dbfile('root.json', 'json'))['root_path']
 
@@ -115,6 +125,8 @@ $this.list_match_struct = async function(elm='')
 	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
 	// and not just some random shit
+	// update: this is SOME sort of system, but still not what we need
+	$this.media_units_iteration.kill()
 	$this.dirlisting = [];
 	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
 
@@ -184,14 +196,20 @@ $this.spawn_video_unit = async function(vpath)
 		`)
 		$('mpool flist').append(video_entry)
 
-		const video_preview = await $all.core.py_get(
-			'poolsys/poolsys',
-			{
-				'action': 'load_video_preview',
-				'video_path': vpath
-			},
-			'buffer'
-		)
+		var video_preview = $this.preview_cache_pull(vpath)
+
+		if (!video_preview){
+			var video_preview = await $all.core.py_get(
+				'poolsys/poolsys',
+				{
+					'action': 'load_video_preview',
+					'video_path': vpath
+				},
+				'buffer'
+			)
+			$this.preview_cache_add(vpath, video_preview)
+		}
+
 		
 		const preview_bin = new window.gigabin(video_preview)
 		$this.video_bins[unit_id] = []
@@ -247,14 +265,21 @@ $this.spawn_image_unit = async function(imgpath)
 
 		$('mpool flist').append(media_entry)
 
-		const img_preview = await $all.core.py_get(
-			'poolsys/poolsys',
-			{
-				'action': 'load_image_preview',
-				'image_path': imgpath
-			},
-			'blob_url'
-		)
+		// try pulling shit from cache
+		var img_preview = $this.preview_cache_pull(imgpath)
+
+		// else - load from server
+		if (!img_preview){
+			var img_preview = await $all.core.py_get(
+				'poolsys/poolsys',
+				{
+					'action': 'load_image_preview',
+					'image_path': imgpath
+				},
+				'blob_url'
+			)
+			$this.preview_cache_add(imgpath, img_preview)
+		}
 
 		print(img_preview)
 
@@ -285,14 +310,56 @@ $this.spawn_file_unit = function(flpath)
 
 
 
+$this.iterate_media = async function(ctrl)
+{
+	for (var lst of $this.dirlisting){
+		// die if were told so
+		if (ctrl.alive != true){return}
+
+
+		if (lst['etype'] == 'img'){
+			await $this.spawn_image_unit(lst['path'])
+		}
+
+		if (lst['etype'] == 'vid'){
+			await $this.spawn_video_unit(lst['path'])
+		}
+
+		// $('mpool flist').append(media_entry);
+
+		// important todo: this kinda works, but it'd be better to have a system for this
+	}
+	if (ctrl.alive != true){return}
+
+	// kill self after iteration end
+	// BUT don't do this if this iterator is dead
+	ctrl.kill()
+	$this.dirlisting = []
+}
+
+
+
+$this.medialist_iterator = function()
+{
+	return {
+		launch: function(){
+			if (this.abort){return}
+
+			this.alive = true
+			$this.iterate_media(this)
+		},
+		kill: function(){
+			this.alive = false
+			this.abort = true
+		}
+	}
+}
 
 
 
 
 
-
-
-
+$this.media_units_iteration = $this.medialist_iterator()
 $this.list_media = async function(elm='')
 {
 	print('mpool list media')
@@ -301,6 +368,10 @@ $this.list_media = async function(elm='')
 	window.struct_fld = fld_name;
 	$this.update_vis_path()
 	$this.flush_preview_frames()
+
+	// kill previous iterator
+	$this.media_units_iteration.kill()
+	$this.media_units_iteration = $this.medialist_iterator()
 
 	$this.dirlisting = await $all.core.py_get(
 		'poolsys/poolsys',
@@ -324,28 +395,56 @@ $this.list_media = async function(elm='')
 		</flist-entry>
 	`)
 
-	for (var lst of $this.dirlisting){
-		if ($this.dirlisting.length <= 0){return}
+	$this.media_units_iteration.launch()
+}
 
 
-		if (lst['etype'] == 'img'){
-			await $this.spawn_image_unit(lst['path'])
-		}
 
-		if (lst['etype'] == 'vid'){
-			await $this.spawn_video_unit(lst['path'])
-		}
 
-		// $('mpool flist').append(media_entry);
+$this.preview_cache = []
+$this.preview_cache_add = function(imgp=null, imgdata=null)
+{
+	// don't bother if something broke
+	// also, don't add shit twice...
+	// todo: use path hashes instead of full paths ?
+	if (!imgp || !imgdata || imgp in $this.preview_cache){return}
 
-		// important todo: this kinda works, but it'd be better to have a system for this
-		
+	// basically, new items are always accepted
+	// when the cache is too big - the last item is deleted and a new one is added
+
+	// todo: make 500 an adjustable number
+	if ($this.preview_cache.length >= 500){
+		// delete fist element from array
+		// and also delete shit from browser cache
+		// important todo: simply define the URL sys with a const in the top of the core
+		(window.URL || window.webkitURL).revokeObjectURL($this.preview_cache[0].imgdata)
+		$this.preview_cache.shift()
 	}
 
-	$this.dirlisting = []
-
-	
+	// add new requested element
+	$this.preview_cache.push({
+		'imgp': imgp,
+		'imgdata': imgdata
+	})
 }
+
+
+// important todo: is it possible to simply check whether an object exists in the given array ?
+$this.preview_cache_pull = function(query)
+{
+	for (var entry of $this.preview_cache){
+		if (entry.imgp == query){
+			return entry.imgdata
+		}
+	}
+	return null
+}
+
+
+
+
+
+
 
 $this.temp_lies = async function(flpath)
 {
@@ -399,7 +498,8 @@ $this.await_img_load = function(imgsrc)
 
 $this.load_fullres_media = async function(elm)
 {
-
+	if (elm.nodeType != Node.ELEMENT_NODE){return}
+	elm = elm.closest('flist-entry')
 	// todo: this should work differently, probaly
 	if (!elm.classList.contains('media_entry')){return}
 	// delete existing preview from the page
@@ -495,22 +595,67 @@ $this.clear_media_dl_queue = function()
 
 $this.update_vis_path = function()
 {
-	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
-	const cpath = (
+
+	const ctext = (
+		('root/')
+		+
 		(window.league ? (window.league + '/') : '')
+		// (window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">S</div>`) : '')
 		+
 		(window.league_match ? (window.league_match + '/') : '')
+		// (window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">S</div>`) : '')
 		+
 		(window.struct_fld ? (window.struct_fld + '/') : '')
+		// (window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
 	)
-	$('#mpool_tobpar #vispath').text(cpath)
+
+	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
+	const cpath = (
+		`<div vptype="root" class="vispath_fld">root</div><div class="vispath_separator">/</div>`
+		+
+		(window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
+	)
+	$('#mpool_tobpar #vispath').html(cpath)
 
 	// url
 	print('update url')
 	var queryParams = new URLSearchParams(window.location.search);
-	queryParams.set('f', cpath);
+	queryParams.set('f', ctext);
 	history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
 }
+
+$this.vispath_clicker = async function(vp)
+{
+	const pathtype = vp.getAttribute('vptype')
+
+	// also kill current iterator
+	$this.media_units_iteration.kill()
+
+	if (pathtype == 'root'){
+		window.league = null
+		window.league_match = null
+		window.struct_fld = null
+		await $this.load_root_dir()
+	}
+	if (pathtype == 'league'){
+		window.league_match = null
+		window.struct_fld = null
+		await $this.list_league_matches(window.league)
+	}
+	if (pathtype == 'league_match'){
+		window.struct_fld = null
+		await $this.list_match_struct(window.league_match)
+	}
+	if (pathtype == 'struct_fld'){
+		await $this.list_media(window.struct_fld)
+	}
+}
+
+
 
 
 $this.select_all_in_folder = function(evt)

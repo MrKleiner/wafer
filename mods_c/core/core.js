@@ -113,9 +113,198 @@ window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 	});
 }
 
+window.bootlegger.core.browser_detection_shite = function()
+{
+	// Get the user-agent string
+	let userAgentString = navigator.userAgent;
+
+	// Detect Chrome
+	let chromeAgent = userAgentString.indexOf('Chrome') > -1;
+
+	// Detect Internet Explorer
+	let IExplorerAgent = userAgentString.indexOf('MSIE') > -1 || userAgentString.indexOf('rv:') > -1;
+
+	// Detect Firefox
+	let firefoxAgent = userAgentString.indexOf('Firefox') > -1;
+
+	// Detect Safari
+	let safariAgent = userAgentString.indexOf('Safari') > -1;
+
+	// Discard Safari since it also matches Chrome
+	if ((chromeAgent) && (safariAgent)){
+		safariAgent = false;
+	}
+
+	// Detect Opera
+	let operaAgent = userAgentString.indexOf('OP') > -1;
+
+	// Discard Chrome since it also matches Opera     
+	if ((chromeAgent) && (operaAgent)){
+		chromeAgent = false;
+	}
+
+	if (safariAgent){
+		$('body').html(`
+			<div style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center">
+				<h1 style="color: white">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!<h1>
+				<img style="width: 100%; height: 50%; object-fit: contain; object-position: center;" src="./assets/fuck_safari.webp">
+			</div>
+		`);
+	}
+
+}
+
+
+window.bootlegger.core.browser_detection = function()
+{
+	// browser detect
+	var BrowserDetect = {
+	        init: function(userAgent, appVersion) {
+			this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
+			this.version = this.searchVersion(userAgent) || this.searchVersion(appVersion) || "an unknown version";
+			this.OS = this.searchString(this.dataOS) || "an unknown OS";
+		},
+		searchString: function(data) {
+			for (var i = 0; i < data.length; i++) {
+				var dataString = data[i].string;
+				var dataProp = data[i].prop;
+				this.versionSearchString = data[i].versionSearch || data[i].identity;
+				if (dataString) {
+	              if (dataString.indexOf(data[i].subString) != -1) {
+	                return data[i].identity;
+	              }
+				} else if (dataProp) {
+	              return data[i].identity;
+	            }
+			}
+		},
+		searchVersion: function(dataString) {
+			var index = dataString.indexOf(this.versionSearchString);
+			if (index == -1) return;
+			return parseFloat(dataString.substring(index + this.versionSearchString.length + 1));
+		},
+		dataBrowser: [{
+			string: navigator.userAgent,
+			subString: "Chrome",
+			identity: "Chrome"
+		}, {
+			string: navigator.userAgent,
+			subString: "OmniWeb",
+			versionSearch: "OmniWeb/",
+			identity: "OmniWeb"
+		}, {
+			string: navigator.vendor,
+			subString: "Apple",
+			identity: "Safari",
+			versionSearch: "Version"
+		}, {
+			prop: window.opera,
+			identity: "Opera",
+			versionSearch: "Version"
+		}, {
+			string: navigator.vendor,
+			subString: "iCab",
+			identity: "iCab"
+		}, {
+			string: navigator.vendor,
+			subString: "KDE",
+			identity: "Konqueror"
+		}, {
+			string: navigator.userAgent,
+			subString: "Firefox",
+			identity: "Firefox"
+		}, {
+			string: navigator.vendor,
+			subString: "Camino",
+			identity: "Camino"
+		}, { // for newer Netscapes (6+)
+			string: navigator.userAgent,
+			subString: "Netscape",
+			identity: "Netscape"
+		}, {
+			string: navigator.userAgent,
+			subString: "MSIE",
+			identity: "Explorer",
+			versionSearch: "MSIE"
+		}, {
+	        string: navigator.userAgent,
+	        subString: "Trident",
+			identity: "Explorer",
+			versionSearch: "rv"
+	     }, {
+	        string: navigator.userAgent,
+			subString: "Edge",
+			identity: "Edge"
+		}, {
+			string: navigator.userAgent,
+			subString: "Gecko",
+			identity: "Mozilla",
+			versionSearch: "rv"
+		}, { // for older Netscapes (4-)
+			string: navigator.userAgent,
+			subString: "Mozilla",
+			identity: "Netscape",
+			versionSearch: "Mozilla"
+		}],
+		dataOS: [{
+			string: navigator.platform,
+			subString: "Win",
+			identity: "Windows"
+		}, {
+			string: navigator.platform,
+			subString: "Mac",
+			identity: "Mac"
+		}, {
+			string: navigator.userAgent,
+			subString: "iPhone",
+			identity: "iPhone/iPod"
+		}, {
+			string: navigator.platform,
+			subString: "Linux",
+			identity: "Linux"
+		}]
+
+	};
+	BrowserDetect.init(navigator.userAgent, navigator.appVersion);
+
+	///// mobile
+	var isMobile = {
+	    Android: function() {
+	        return navigator.userAgent.match(/Android/i);
+	    },
+	    BlackBerry: function() {
+	        return navigator.userAgent.match(/BlackBerry/i);
+	    },
+	    iOS: function() {
+	        return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+	    },
+	    Opera: function() {
+	        return navigator.userAgent.match(/Opera Mini/i);
+	    },
+	    Windows: function() {
+	        return navigator.userAgent.match(/IEMobile/i);
+	    },
+	    any: function() {
+	        return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
+	    }
+	};
+
+	window.user_browser = BrowserDetect
+
+	if (BrowserDetect.browser.lower() == 'safari'){
+		$('body').html(`
+			<div style="display: flex; font-size: 3.1vw; flex-direction: column; width: 100%; height: 100%; align-items: center; justify-content: center">
+				<h1 style="color: red">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!</h1>
+				<img style="width: 100%; height: 50%; object-fit: contain; object-position: center;" src="../assets/safari_shit.webp">
+			</div>
+		`);
+	}
+
+}
 
 
 $(document).ready(function(){
+	window.bootlegger.core.browser_detection()
 	window.bootlegger.main_pool.module_loader();
 	window.bootlegger.core.profiler();
 	wtf_kill_js();

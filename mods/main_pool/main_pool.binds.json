@@ -22,7 +22,7 @@
 			"pass_params": ""
 		},
 		{
-			"selector": "mpool flist flist-entry.media_entry:not(.lfs_entry)",
+			"selector": "mpool[grid] flist flist-entry.media_entry:not(.lfs_entry) etype, mpool[list] flist flist-entry.media_entry:not(.lfs_entry)",
 			"function": "$this.load_fullres_media",
 			"pass_event": false,
 			"pass_element": true,
@@ -55,6 +55,13 @@
 			"pass_event": false,
 			"pass_element": false,
 			"pass_params": "'arrow_cycle_hint'"
+		},
+		{
+			"selector": "#mpool_tobpar #vispath .vispath_fld",
+			"function": "$this.vispath_clicker",
+			"pass_event": false,
+			"pass_element": true,
+			"pass_params": ""
 		}
 	],
 
