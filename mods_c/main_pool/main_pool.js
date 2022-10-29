@@ -3,9 +3,17 @@ if (!window.bootlegger){window.bootlegger = {}};
 
 if (!window.bootlegger.main_pool){window.bootlegger.main_pool={}};
 
+// an array containg filepaths received from the server
 window.bootlegger.main_pool.dirlisting = []
 
 
+
+// ==================================================
+// 						util
+// ==================================================
+
+
+// switch between grid and list layouts
 window.bootlegger.main_pool.set_flist_view_type = function(tp='list')
 {
 	if (tp == 'list'){
@@ -18,8 +26,7 @@ window.bootlegger.main_pool.set_flist_view_type = function(tp='list')
 	}
 }
 
-
-
+// module load sequence
 window.bootlegger.main_pool.module_loader = async function()
 {
 	print('start loading mpool')
@@ -28,6 +35,7 @@ window.bootlegger.main_pool.module_loader = async function()
 	await window.bootlegger.main_pool.go_dir_path()
 }
 
+// get path from the url and go there on page load 
 window.bootlegger.main_pool.go_dir_path = async function()
 {
 	print('go dir path')
@@ -42,9 +50,31 @@ window.bootlegger.main_pool.go_dir_path = async function()
 	paths[3] ? (await window.bootlegger.main_pool.list_media(paths[3])) : null
 }
 
+// takes image url as an input and returns a fully loaded image element
+window.bootlegger.main_pool.await_img_load = function(imgsrc)
+{
+	return new Promise(function(resolve, reject){
+		var img = new Image();
+		img.onload = function() {
+			resolve(img)
+		}
+		img.onerror = function() {
+			resolve(img)
+		}
+		img.src = imgsrc;
+	});
+
+}
 
 
 
+
+
+// ==================================================
+// 						Navigation
+// ==================================================
+
+// load the root directory of the entire FTP
 window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 {
 	print('mpool load root dir')
@@ -77,7 +107,7 @@ window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 	}
 }
 
-
+// list subroot directories
 window.bootlegger.main_pool.list_league_matches = async function(elm='')
 {
 	window.bootlegger.main_pool.media_units_iteration.kill()
@@ -123,7 +153,7 @@ window.bootlegger.main_pool.list_league_matches = async function(elm='')
 
 }
 
-
+// list dirs of the subroot dir
 window.bootlegger.main_pool.list_match_struct = async function(elm='')
 {
 	print('mpool list match struct')
@@ -179,10 +209,19 @@ window.bootlegger.main_pool.list_match_struct = async function(elm='')
 
 
 
-window.bootlegger.main_pool.video_bins = {}
+
+
+
+
+// ==================================================
+// 					Media spawners
+// ==================================================
+
+
 // important todo: it looks like if an element with image url exists - it's being precached
 // what are the limits of this ?
 // how many elements at once can be precached ?
+window.bootlegger.main_pool.video_bins = {}
 window.bootlegger.main_pool.vidframes_cache = []
 window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 {
@@ -228,15 +267,16 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 	});
 }
 
+// todo: this kinda belongs to the caching category
 window.bootlegger.main_pool.flush_preview_frames = function()
 {
 	for (var rv in window.bootlegger.main_pool.video_bins){
 		for (var fr of window.bootlegger.main_pool.video_bins[rv]){
-			(window.URL || window.webkitURL).revokeObjectURL(fr)
+			obj_url.revokeObjectURL(fr)
 		}
 	}
 	for (var rv of window.bootlegger.main_pool.vidframes_cache){
-		(window.URL || window.webkitURL).revokeObjectURL(rv)
+		obj_url.revokeObjectURL(rv)
 	}
 }
 
@@ -314,6 +354,20 @@ window.bootlegger.main_pool.spawn_file_unit = function(flpath)
 
 
 
+
+
+
+
+
+
+
+
+
+// ==================================================
+// 					Iterators
+// ==================================================
+
+// an iterator object which iterates over the current dirlisting array
 window.bootlegger.main_pool.iterate_media = async function(ctrl)
 {
 	for (var lst of window.bootlegger.main_pool.dirlisting){
@@ -341,13 +395,15 @@ window.bootlegger.main_pool.iterate_media = async function(ctrl)
 	window.bootlegger.main_pool.dirlisting = []
 }
 
-
-
+// controller of the iterator object
 window.bootlegger.main_pool.medialist_iterator = function()
 {
 	return {
 		launch: function(){
-			if (this.abort){return}
+			if (this.alive == false){
+				print('cant launch because not alive already')
+				return
+			}
 
 			this.alive = true
 			window.bootlegger.main_pool.iterate_media(this)
@@ -363,6 +419,13 @@ window.bootlegger.main_pool.medialist_iterator = function()
 
 
 
+
+
+
+
+// ==================================================
+// 			directory file listing gateway
+// ==================================================
 window.bootlegger.main_pool.media_units_iteration = window.bootlegger.main_pool.medialist_iterator()
 window.bootlegger.main_pool.list_media = async function(elm='')
 {
@@ -386,6 +449,10 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 		'json'
 	)
 
+	// kill any existing iterators and spawn a new one
+	window.bootlegger.main_pool.media_units_iteration.kill()
+	window.bootlegger.main_pool.media_units_iteration = window.bootlegger.main_pool.medialist_iterator()
+
 	print('listed media:', window.bootlegger.main_pool.dirlisting)
 
 	$('mpool flist').empty();
@@ -405,44 +472,6 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 
 
 
-window.bootlegger.main_pool.preview_cache = []
-window.bootlegger.main_pool.preview_cache_add = function(imgp=null, imgdata=null)
-{
-	// don't bother if something broke
-	// also, don't add shit twice...
-	// todo: use path hashes instead of full paths ?
-	if (!imgp || !imgdata || imgp in window.bootlegger.main_pool.preview_cache){return}
-
-	// basically, new items are always accepted
-	// when the cache is too big - the last item is deleted and a new one is added
-
-	// todo: make 500 an adjustable number
-	if (window.bootlegger.main_pool.preview_cache.length >= 500){
-		// delete fist element from array
-		// and also delete shit from browser cache
-		// important todo: simply define the URL sys with a const in the top of the core
-		(window.URL || window.webkitURL).revokeObjectURL(window.bootlegger.main_pool.preview_cache[0].imgdata)
-		window.bootlegger.main_pool.preview_cache.shift()
-	}
-
-	// add new requested element
-	window.bootlegger.main_pool.preview_cache.push({
-		'imgp': imgp,
-		'imgdata': imgdata
-	})
-}
-
-
-// important todo: is it possible to simply check whether an object exists in the given array ?
-window.bootlegger.main_pool.preview_cache_pull = function(query)
-{
-	for (var entry of window.bootlegger.main_pool.preview_cache){
-		if (entry.imgp == query){
-			return entry.imgdata
-		}
-	}
-	return null
-}
 
 
 
@@ -450,55 +479,14 @@ window.bootlegger.main_pool.preview_cache_pull = function(query)
 
 
 
-window.bootlegger.main_pool.temp_lies = async function(flpath)
-{
-	const media_preview = await window.bootlegger.core.py_get(
-		{
-			'action': 'poolsys.load_media_preview',
-			'media_path': flpath
-		},
-		'blob_url'
-	)
-	// print(media_preview)
-	// return
 
 
-	var media_entry = $(`
-		<flist-entry class="media_entry" flpath="${flpath}" flname="${flpath.split('/').at(-1)}">
-			<etype style="background-image: url(${media_preview})" img>
-			</etype>
-			<ename>${flpath.split('/').at(-1)}</ename>
-		</flist-entry>
-	`)
-
-	$('mpool flist').append(media_entry)
-}
 
 
-window.bootlegger.main_pool.fm_cache = [];
-window.bootlegger.main_pool.cache_fullres_media = function(url)
-{
-	if (window.bootlegger.main_pool.fm_cache.length > 16){
-		(window.URL || window.webkitURL).revokeObjectURL(window.bootlegger.main_pool.fm_cache[0])
-		window.bootlegger.main_pool.fm_cache.shift()
-	}
-	window.bootlegger.main_pool.fm_cache.push(url)
-}
 
-window.bootlegger.main_pool.await_img_load = function(imgsrc)
-{
-	return new Promise(function(resolve, reject){
-		var img = new Image();
-		img.onload = function() {
-			resolve(img)
-		}
-		img.onerror = function() {
-			resolve(img)
-		}
-		img.src = imgsrc;
-	});
 
-}
+
+
 
 window.bootlegger.main_pool.load_fullres_media = async function(elm)
 {
@@ -521,7 +509,7 @@ window.bootlegger.main_pool.load_fullres_media = async function(elm)
 	const media_path = elm.getAttribute('flpath');
 
 	const tgt = $(`
-		<img id="pic_fullres_preview" src="../assets/spinning_circle.svg">
+		<img draggable="false" id="pic_fullres_preview" src="../assets/spinning_circle.svg">
 	`);
 
 
@@ -541,6 +529,7 @@ window.bootlegger.main_pool.load_fullres_media = async function(elm)
 	// Chrome is prone to lagging when many tabs are open at once
 	const img_l = await window.bootlegger.main_pool.await_img_load(fullres);
 	img_l.id = 'pic_fullres_preview'
+	img_l.setAttribute('draggable', 'false')
 	tgt[0].replaceWith(img_l)
 	// $('#pic_fullres_preview').remove()
 	// img_l.id = 'pic_fullres_preview'
@@ -595,70 +584,6 @@ window.bootlegger.main_pool.clear_media_dl_queue = function()
 	$('flist-entry').removeClass('media_entry_selected');
 	$(`mpool dlq #dlq_list .dlq_item`).remove();
 }
-
-
-window.bootlegger.main_pool.update_vis_path = function()
-{
-
-	const ctext = (
-		('root/')
-		+
-		(window.league ? (window.league + '/') : '')
-		// (window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">S</div>`) : '')
-		+
-		(window.league_match ? (window.league_match + '/') : '')
-		// (window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">S</div>`) : '')
-		+
-		(window.struct_fld ? (window.struct_fld + '/') : '')
-		// (window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
-	)
-
-	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
-	const cpath = (
-		`<div vptype="root" class="vispath_fld">root</div><div class="vispath_separator">/</div>`
-		+
-		(window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">/</div>`) : '')
-		+
-		(window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">/</div>`) : '')
-		+
-		(window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
-	)
-	$('#mpool_tobpar #vispath').html(cpath)
-
-	// url
-	print('update url')
-	var queryParams = new URLSearchParams(window.location.search);
-	queryParams.set('f', ctext);
-	history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
-}
-
-window.bootlegger.main_pool.vispath_clicker = async function(vp)
-{
-	const pathtype = vp.getAttribute('vptype')
-
-	// also kill current iterator
-	window.bootlegger.main_pool.media_units_iteration.kill()
-
-	if (pathtype == 'root'){
-		window.league = null
-		window.league_match = null
-		window.struct_fld = null
-		await window.bootlegger.main_pool.load_root_dir()
-	}
-	if (pathtype == 'league'){
-		window.league_match = null
-		window.struct_fld = null
-		await window.bootlegger.main_pool.list_league_matches(window.league)
-	}
-	if (pathtype == 'league_match'){
-		window.struct_fld = null
-		await window.bootlegger.main_pool.list_match_struct(window.league_match)
-	}
-	if (pathtype == 'struct_fld'){
-		await window.bootlegger.main_pool.list_media(window.struct_fld)
-	}
-}
-
 
 
 
@@ -720,3 +645,80 @@ window.bootlegger.main_pool.download_image_from_fullres = function(evt, elm)
 	const flname = $(`flist-entry[img_cache="${elm.src}"]`).attr('flname');
 	saveAs(elm.src, flname)
 }
+
+
+
+
+
+
+
+
+
+// ==================================================
+// 					visual path stuff
+// ==================================================
+window.bootlegger.main_pool.update_vis_path = function()
+{
+	// this goes to the url
+	const ctext = (
+		('root/')
+		+
+		(window.league ? (window.league + '/') : '')
+		+
+		(window.league_match ? (window.league_match + '/') : '')
+		+
+		(window.struct_fld ? (window.struct_fld + '/') : '')
+	)
+
+	// and this appears on the page
+	const cpath = (
+		`<div vptype="root" class="vispath_fld">root</div><div class="vispath_separator">/</div>`
+		+
+		(window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
+	)
+
+	// page visuals
+	$('#mpool_tobpar #vispath').html(cpath)
+
+	// url
+	print('update url')
+	var queryParams = new URLSearchParams(window.location.search);
+	queryParams.set('f', ctext);
+	// important todo: use URL decode instead of simple replacement stuff
+	window.history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
+}
+
+window.bootlegger.main_pool.vispath_clicker = async function(vp)
+{
+	const pathtype = vp.getAttribute('vptype')
+
+	// also kill current iterator
+	window.bootlegger.main_pool.media_units_iteration.kill()
+
+	if (pathtype == 'root'){
+		window.league = null
+		window.league_match = null
+		window.struct_fld = null
+		await window.bootlegger.main_pool.load_root_dir()
+	}
+	if (pathtype == 'league'){
+		window.league_match = null
+		window.struct_fld = null
+		await window.bootlegger.main_pool.list_league_matches(window.league)
+	}
+	if (pathtype == 'league_match'){
+		window.struct_fld = null
+		await window.bootlegger.main_pool.list_match_struct(window.league_match)
+	}
+	if (pathtype == 'struct_fld'){
+		await window.bootlegger.main_pool.list_media(window.struct_fld)
+	}
+}
+
+
+
+

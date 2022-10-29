@@ -60,7 +60,7 @@ window.print = console.log;
 // The python version is the most efficient, since the entire fine doesn't has to be read
 
 
-
+const obj_url = (window.URL || window.webkitURL);
 
 
 
@@ -365,7 +365,7 @@ $this.py_get = async function(mod='', prms={}, load_as='text')
 				}
 				if (load_as == 'blob_url'){
 					const boobs = new Blob([bin], {});
-					resolve((window.URL || window.webkitURL).createObjectURL(boobs))
+					resolve(obj_url.createObjectURL(boobs))
 					return
 				}
 				console.warn('PyGet Warn: falling back to default data type');

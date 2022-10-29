@@ -63,6 +63,9 @@ class server:
 		# system root, aka root of the file pool
 		self.sys_root = Path(self.sv_cfg['system_root'])
 
+		# temp dir for temp files
+		self.tmp_dir = self.preview_db / 'temp_shite'
+
 		# self.user_token = self.auth_db.get(url_params.get('auth'))
 		self.util = util
 

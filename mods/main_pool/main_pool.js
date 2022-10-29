@@ -1,7 +1,15 @@
 
+// an array containg filepaths received from the server
 $this.dirlisting = []
 
 
+
+// ==================================================
+// 						util
+// ==================================================
+
+
+// switch between grid and list layouts
 $this.set_flist_view_type = function(tp='list')
 {
 	if (tp == 'list'){
@@ -14,8 +22,7 @@ $this.set_flist_view_type = function(tp='list')
 	}
 }
 
-
-
+// module load sequence
 $this.module_loader = async function()
 {
 	print('start loading mpool')
@@ -24,6 +31,7 @@ $this.module_loader = async function()
 	await $this.go_dir_path()
 }
 
+// get path from the url and go there on page load 
 $this.go_dir_path = async function()
 {
 	print('go dir path')
@@ -38,9 +46,31 @@ $this.go_dir_path = async function()
 	paths[3] ? (await $this.list_media(paths[3])) : null
 }
 
+// takes image url as an input and returns a fully loaded image element
+$this.await_img_load = function(imgsrc)
+{
+	return new Promise(function(resolve, reject){
+		var img = new Image();
+		img.onload = function() {
+			resolve(img)
+		}
+		img.onerror = function() {
+			resolve(img)
+		}
+		img.src = imgsrc;
+	});
+
+}
 
 
 
+
+
+// ==================================================
+// 						Navigation
+// ==================================================
+
+// load the root directory of the entire FTP
 $this.load_root_dir = async function(doup=true)
 {
 	print('mpool load root dir')
@@ -73,7 +103,7 @@ $this.load_root_dir = async function(doup=true)
 	}
 }
 
-
+// list subroot directories
 $this.list_league_matches = async function(elm='')
 {
 	$this.media_units_iteration.kill()
@@ -119,7 +149,7 @@ $this.list_league_matches = async function(elm='')
 
 }
 
-
+// list dirs of the subroot dir
 $this.list_match_struct = async function(elm='')
 {
 	print('mpool list match struct')
@@ -175,10 +205,19 @@ $this.list_match_struct = async function(elm='')
 
 
 
-$this.video_bins = {}
+
+
+
+
+// ==================================================
+// 					Media spawners
+// ==================================================
+
+
 // important todo: it looks like if an element with image url exists - it's being precached
 // what are the limits of this ?
 // how many elements at once can be precached ?
+$this.video_bins = {}
 $this.vidframes_cache = []
 $this.spawn_video_unit = async function(vpath)
 {
@@ -224,15 +263,16 @@ $this.spawn_video_unit = async function(vpath)
 	});
 }
 
+// todo: this kinda belongs to the caching category
 $this.flush_preview_frames = function()
 {
 	for (var rv in $this.video_bins){
 		for (var fr of $this.video_bins[rv]){
-			(window.URL || window.webkitURL).revokeObjectURL(fr)
+			obj_url.revokeObjectURL(fr)
 		}
 	}
 	for (var rv of $this.vidframes_cache){
-		(window.URL || window.webkitURL).revokeObjectURL(rv)
+		obj_url.revokeObjectURL(rv)
 	}
 }
 
@@ -310,6 +350,20 @@ $this.spawn_file_unit = function(flpath)
 
 
 
+
+
+
+
+
+
+
+
+
+// ==================================================
+// 					Iterators
+// ==================================================
+
+// an iterator object which iterates over the current dirlisting array
 $this.iterate_media = async function(ctrl)
 {
 	for (var lst of $this.dirlisting){
@@ -337,13 +391,15 @@ $this.iterate_media = async function(ctrl)
 	$this.dirlisting = []
 }
 
-
-
+// controller of the iterator object
 $this.medialist_iterator = function()
 {
 	return {
 		launch: function(){
-			if (this.abort){return}
+			if (this.alive == false){
+				print('cant launch because not alive already')
+				return
+			}
 
 			this.alive = true
 			$this.iterate_media(this)
@@ -359,6 +415,13 @@ $this.medialist_iterator = function()
 
 
 
+
+
+
+
+// ==================================================
+// 			directory file listing gateway
+// ==================================================
 $this.media_units_iteration = $this.medialist_iterator()
 $this.list_media = async function(elm='')
 {
@@ -382,6 +445,10 @@ $this.list_media = async function(elm='')
 		'json'
 	)
 
+	// kill any existing iterators and spawn a new one
+	$this.media_units_iteration.kill()
+	$this.media_units_iteration = $this.medialist_iterator()
+
 	print('listed media:', $this.dirlisting)
 
 	$('mpool flist').empty();
@@ -401,44 +468,6 @@ $this.list_media = async function(elm='')
 
 
 
-$this.preview_cache = []
-$this.preview_cache_add = function(imgp=null, imgdata=null)
-{
-	// don't bother if something broke
-	// also, don't add shit twice...
-	// todo: use path hashes instead of full paths ?
-	if (!imgp || !imgdata || imgp in $this.preview_cache){return}
-
-	// basically, new items are always accepted
-	// when the cache is too big - the last item is deleted and a new one is added
-
-	// todo: make 500 an adjustable number
-	if ($this.preview_cache.length >= 500){
-		// delete fist element from array
-		// and also delete shit from browser cache
-		// important todo: simply define the URL sys with a const in the top of the core
-		(window.URL || window.webkitURL).revokeObjectURL($this.preview_cache[0].imgdata)
-		$this.preview_cache.shift()
-	}
-
-	// add new requested element
-	$this.preview_cache.push({
-		'imgp': imgp,
-		'imgdata': imgdata
-	})
-}
-
-
-// important todo: is it possible to simply check whether an object exists in the given array ?
-$this.preview_cache_pull = function(query)
-{
-	for (var entry of $this.preview_cache){
-		if (entry.imgp == query){
-			return entry.imgdata
-		}
-	}
-	return null
-}
 
 
 
@@ -446,55 +475,14 @@ $this.preview_cache_pull = function(query)
 
 
 
-$this.temp_lies = async function(flpath)
-{
-	const media_preview = await $all.core.py_get(
-		{
-			'action': 'poolsys.load_media_preview',
-			'media_path': flpath
-		},
-		'blob_url'
-	)
-	// print(media_preview)
-	// return
 
 
-	var media_entry = $(`
-		<flist-entry class="media_entry" flpath="${flpath}" flname="${flpath.split('/').at(-1)}">
-			<etype style="background-image: url(${media_preview})" img>
-			</etype>
-			<ename>${flpath.split('/').at(-1)}</ename>
-		</flist-entry>
-	`)
-
-	$('mpool flist').append(media_entry)
-}
 
 
-$this.fm_cache = [];
-$this.cache_fullres_media = function(url)
-{
-	if ($this.fm_cache.length > 16){
-		(window.URL || window.webkitURL).revokeObjectURL($this.fm_cache[0])
-		$this.fm_cache.shift()
-	}
-	$this.fm_cache.push(url)
-}
 
-$this.await_img_load = function(imgsrc)
-{
-	return new Promise(function(resolve, reject){
-		var img = new Image();
-		img.onload = function() {
-			resolve(img)
-		}
-		img.onerror = function() {
-			resolve(img)
-		}
-		img.src = imgsrc;
-	});
 
-}
+
+
 
 $this.load_fullres_media = async function(elm)
 {
@@ -517,7 +505,7 @@ $this.load_fullres_media = async function(elm)
 	const media_path = elm.getAttribute('flpath');
 
 	const tgt = $(`
-		<img id="pic_fullres_preview" src="../assets/spinning_circle.svg">
+		<img draggable="false" id="pic_fullres_preview" src="../assets/spinning_circle.svg">
 	`);
 
 
@@ -537,6 +525,7 @@ $this.load_fullres_media = async function(elm)
 	// Chrome is prone to lagging when many tabs are open at once
 	const img_l = await $this.await_img_load(fullres);
 	img_l.id = 'pic_fullres_preview'
+	img_l.setAttribute('draggable', 'false')
 	tgt[0].replaceWith(img_l)
 	// $('#pic_fullres_preview').remove()
 	// img_l.id = 'pic_fullres_preview'
@@ -591,70 +580,6 @@ $this.clear_media_dl_queue = function()
 	$('flist-entry').removeClass('media_entry_selected');
 	$(`mpool dlq #dlq_list .dlq_item`).remove();
 }
-
-
-$this.update_vis_path = function()
-{
-
-	const ctext = (
-		('root/')
-		+
-		(window.league ? (window.league + '/') : '')
-		// (window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">S</div>`) : '')
-		+
-		(window.league_match ? (window.league_match + '/') : '')
-		// (window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">S</div>`) : '')
-		+
-		(window.struct_fld ? (window.struct_fld + '/') : '')
-		// (window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
-	)
-
-	// $('#mpool_tobpar #vispath').text(`${window.league || ''}/${window.league_match || ''}/${window.struct_fld || ''}`)
-	const cpath = (
-		`<div vptype="root" class="vispath_fld">root</div><div class="vispath_separator">/</div>`
-		+
-		(window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">/</div>`) : '')
-		+
-		(window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">/</div>`) : '')
-		+
-		(window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
-	)
-	$('#mpool_tobpar #vispath').html(cpath)
-
-	// url
-	print('update url')
-	var queryParams = new URLSearchParams(window.location.search);
-	queryParams.set('f', ctext);
-	history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
-}
-
-$this.vispath_clicker = async function(vp)
-{
-	const pathtype = vp.getAttribute('vptype')
-
-	// also kill current iterator
-	$this.media_units_iteration.kill()
-
-	if (pathtype == 'root'){
-		window.league = null
-		window.league_match = null
-		window.struct_fld = null
-		await $this.load_root_dir()
-	}
-	if (pathtype == 'league'){
-		window.league_match = null
-		window.struct_fld = null
-		await $this.list_league_matches(window.league)
-	}
-	if (pathtype == 'league_match'){
-		window.struct_fld = null
-		await $this.list_match_struct(window.league_match)
-	}
-	if (pathtype == 'struct_fld'){
-		await $this.list_media(window.struct_fld)
-	}
-}
-
 
 
 
@@ -716,3 +641,80 @@ $this.download_image_from_fullres = function(evt, elm)
 	const flname = $(`flist-entry[img_cache="${elm.src}"]`).attr('flname');
 	saveAs(elm.src, flname)
 }
+
+
+
+
+
+
+
+
+
+// ==================================================
+// 					visual path stuff
+// ==================================================
+$this.update_vis_path = function()
+{
+	// this goes to the url
+	const ctext = (
+		('root/')
+		+
+		(window.league ? (window.league + '/') : '')
+		+
+		(window.league_match ? (window.league_match + '/') : '')
+		+
+		(window.struct_fld ? (window.struct_fld + '/') : '')
+	)
+
+	// and this appears on the page
+	const cpath = (
+		`<div vptype="root" class="vispath_fld">root</div><div class="vispath_separator">/</div>`
+		+
+		(window.league ? (`<div vptype="league" class="vispath_fld">${window.league}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.league_match ? (`<div vptype="league_match" class="vispath_fld">${window.league_match}</div><div class="vispath_separator">/</div>`) : '')
+		+
+		(window.struct_fld ? (`<div vptype="struct_fld" class="vispath_fld">${window.struct_fld}</div>`) : '')
+	)
+
+	// page visuals
+	$('#mpool_tobpar #vispath').html(cpath)
+
+	// url
+	print('update url')
+	var queryParams = new URLSearchParams(window.location.search);
+	queryParams.set('f', ctext);
+	// important todo: use URL decode instead of simple replacement stuff
+	window.history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
+}
+
+$this.vispath_clicker = async function(vp)
+{
+	const pathtype = vp.getAttribute('vptype')
+
+	// also kill current iterator
+	$this.media_units_iteration.kill()
+
+	if (pathtype == 'root'){
+		window.league = null
+		window.league_match = null
+		window.struct_fld = null
+		await $this.load_root_dir()
+	}
+	if (pathtype == 'league'){
+		window.league_match = null
+		window.struct_fld = null
+		await $this.list_league_matches(window.league)
+	}
+	if (pathtype == 'league_match'){
+		window.struct_fld = null
+		await $this.list_match_struct(window.league_match)
+	}
+	if (pathtype == 'struct_fld'){
+		await $this.list_media(window.struct_fld)
+	}
+}
+
+
+
+

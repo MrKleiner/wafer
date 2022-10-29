@@ -103,6 +103,7 @@ class poolsys:
 	# generate a lowres preview of a static image
 	def generate_pic_preview(self, img_path=None):
 		import subprocess as sp
+		from pathlib import Path
 
 		img_path = Path(img_path)
 		if not img_path.is_file():
@@ -179,7 +180,7 @@ class poolsys:
 		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
 
 		# generate the preview
-		webp = self.generate_pic_preview()
+		webp = self.generate_pic_preview(tgt_path)
 
 		# Save preview to the preview folder
 		preview_path.write_bytes(webp)

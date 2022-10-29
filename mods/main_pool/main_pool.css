@@ -253,6 +253,9 @@ mpool[grid] flist
 
 mpool[grid] flist flist-entry
 {
+	/*important todo: this is experimental*/
+	/*padding: 1px;*/
+	/*important todo: this is experimental*/
 	display: flex;
 	flex-direction: column;
 	aspect-ratio: 20 / 15;
@@ -282,7 +285,9 @@ mpool[grid] flist flist-entry ename
 	text-overflow: ellipsis;
 	overflow: hidden;
 	text-align: center;
+	/*important todo: this is experimental*/
 	padding: 2px;
+	/*important todo: this is experimental*/
 }
 
 mpool[grid] flist flist-entry.folder ename

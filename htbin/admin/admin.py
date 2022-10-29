@@ -3,6 +3,17 @@ sys.path.append('..')
 from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
+# classified info:
+
+# reject reasons:
+# 1809246: bad auth
+# 1809246/nen: missing params
+
+# 2446: invalid auth username
+# 314: invalid auth password
+
+# 10092007: requested upload lfs target does not exist
+
 
 # this entire class requires admin
 class user_ctrl:
