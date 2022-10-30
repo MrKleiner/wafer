@@ -200,9 +200,16 @@ class poolsys:
 		# start generating preview
 		rum = self.generate_vid_preview(tgt_path)
 
+		# unregister chad location
+		# todo: not needed ?
+		fj = server.journal()
+
 		# move the preview to the previews folder
 		newloc = tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.chad'
 		shutil.move(str(rum), str(newloc))
+
+		# unreg
+		fj.unreg_file(rum)
 
 		# send generated file to client
 		server.x_files(newloc, newloc.name)
@@ -234,6 +241,10 @@ class poolsys:
 		# old ver
 		# ffmpeg -i in.mp4 -vf select='eq(n\,100)+eq(n\,184)+eq(n\,213)' -vsync 0 frames%d.jpg
 
+		# file journal
+		# keep track of frames n shit
+		# the less rubbish there is the better
+		fj = server.journal()
 
 		# preview db location
 		prdb = server.preview_db
@@ -288,8 +299,11 @@ class poolsys:
 		# Now, construct ffmpeg params for frames extraction and execute frame extraction
 		# ==========================================================
 
+		# important todo: finally create a frame table
+		frc = 100 if vid_fr_count > 100 else vid_fr_count - 1
+
 		# frame selection filter
-		frame_nums = '+'.join([f'eq(n\\,{int(frnum)})' for frnum in server.util.even_points(1,vid_fr_count,100)])
+		frame_nums = '+'.join([f'eq(n\\,{int(frnum)})' for frnum in server.util.even_points(1,vid_fr_count,frc)])
 		# ffmpeg execution params
 		# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
 		ffmpeg_prms = [
@@ -338,8 +352,11 @@ class poolsys:
 		chad_location = prdb / 'temp_shite' / f'{preview_file_name}.chad'
 		chad = gigabin(chad_location, True)
 
+		# register gigabin for deletion
+		fj.reg_file(chad_location, 1)
+
 		# add frames to gigabin one by one
-		for vframe in range(100):
+		for vframe in range(frc):
 			# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
 			giga_name = (prdb / 'temp_shite' / f'{preview_file_name}{vframe+1}.btgsystmp.webp')
 			chad.add_solid(
@@ -356,9 +373,11 @@ class poolsys:
 			# video dimensions
 			'dimensions': vid_res,
 			# frame count
-			'frame_count': vid_fr_count,
+			'frame_count_total': vid_fr_count,
+			#
+			'preview_frame_count': frc,
 			# test
-			'lizards': 'sexy',
+			'lizards': 'sexy'
 			# 'debug': str(prdb / 'temp_shite' / f'{preview_file_name}{1}.webp')
 		}
 		# add this json to gigabin

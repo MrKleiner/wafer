@@ -251,8 +251,11 @@ $this.spawn_video_unit = async function(vpath)
 
 		
 		const preview_bin = new window.gigabin(video_preview)
+		const giga_info = preview_bin.read_file('index', 'json')
+		const pframe_count = giga_info['preview_frame_count']
+		$(`flist-entry[flpath="${vpath}"]`).attr('framecount', pframe_count)
 		$this.video_bins[unit_id] = []
-		for (var frame of range(100)){
+		for (var frame of range(pframe_count)){
 			const imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
 			$this.video_bins[unit_id].push(imgu)
 			$this.vidframes_cache.push(await $this.await_img_load(imgu))
@@ -279,13 +282,20 @@ $this.flush_preview_frames = function()
 // todo: collapse another multiplier
 $this.vidscroll = function(evt, etgt)
 {
+	// element
+	const flist_entry = etgt.closest('flist-entry')
+
 	// Get bbox relative to viewport
-	const pr_id = etgt.closest('flist-entry').getAttribute('unit_id')
+	const pr_id = flist_entry.getAttribute('unit_id')
 	const rect = etgt.getBoundingClientRect()
+
+	// get frame count
+	const prf = flist_entry.getAttribute('framecount')
+
 	// Mouse position relative to element
 	const current_x = Math.abs(evt.clientX - rect.left);
 	// current / total = current percent progress
-	const scroll = int(100 * (current_x / rect.width))
+	const scroll = int(prf * (current_x / rect.width))
 	etgt.style.backgroundImage = `url(${$this.video_bins[pr_id][scroll]})`
 }
 

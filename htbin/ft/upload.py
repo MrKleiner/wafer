@@ -60,10 +60,18 @@ class uploadsys:
 			# todo: also make it only accessible by the original uploader
 			'upload_token': up_token
 		}
+		# create journal tasks
+		fj = server.journal()
+
 		# create empty target
-		(server.tmp_dir / f'{up_token}.target').write_bytes(b'')
+		tgt_p = (server.tmp_dir / f'{up_token}.target')
+		tgt_p.write_bytes(b'')
+		fj.reg_file(tgt_p)
 		# save info
-		(server.tmp_dir / f'{up_token}.object').write_bytes(json.dumps(info_object).encode())
+		obj_p = (server.tmp_dir / f'{up_token}.object')
+		obj_p.write_bytes(json.dumps(info_object).encode())
+		fj.reg_file(obj_p)
+
 
 		# return this object to client
 		server.bin_jwrite({'status': 'created_target', 'token': up_token})
@@ -118,10 +126,12 @@ class uploadsys:
 		info_obj = json.loads(lfs_tgt.with_suffix('.object').read_bytes())
 
 		# if the destination exists already - return error
+		# important todo: warn/ignore or overwrite ?
 		dest_loc = (server.sys_root / info_obj['dest_dir'] / info_obj['flname'])
-		if dest_loc.is_file():
-			server.bin_jwrite({'status': 'error_dest_file_exists'})
-			server.flush()
+		dest_loc.unlink(missing_ok=True)
+		# if dest_loc.is_file():
+			# server.bin_jwrite({'status': 'error_dest_file_exists'})
+			# server.flush()
 
 		# move file to the destination
 		shutil.move(str(lfs_tgt), str(dest_loc))

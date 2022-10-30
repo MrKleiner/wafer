@@ -208,6 +208,13 @@ window.bootlegger.ft.queue_iterator = async function(ctrl)
 // takes file and optional starting offset
 window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 {
+	// restore protocol
+	window.localStorage.setItem('upl_restore_name', inf.file.name)
+	window.localStorage.setItem('upl_restore_offs', inf['live_shift'])
+	window.localStorage.setItem('upl_restore_hash', null)
+
+
+
 	// passed file info
 	const fl = inf['file']
 
@@ -222,6 +229,7 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	print('Calculating full hash...')
 	echo_element_pbg.addClass('hashing')
 	const fl_hash = await window.bootlegger.ft.hash_file(fl, inf)
+	window.localStorage.setItem('upl_restore_hash', fl_hash)
 	echo_element_pbg.removeClass('hashing')
 	echo_element_pbg.css('transform', `scaleX(0)`)
 
@@ -285,8 +293,11 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 		// shift file cursor
 		offs += chunk_size
 		inf['live_shift'] = offs
-		print('Sent chunk to server:', chunk_send_echo)
+		window.localStorage.setItem('upl_restore_offs', offs)
 		echo_element_pbg.css('transform', `scaleX(${offs/inf.file.size})`)
+
+		print('Sent chunk to server:', chunk_send_echo)
+
 		// BREAK POINT
 		if(!ctrl.alive){return}
 	}
@@ -315,7 +326,7 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	if (window.bootlegger.core.allowed_vid.includes(fext)){
 		window.bootlegger.main_pool.spawn_video_unit(`${inf.dest}/${inf.file.name}`)
 	}
-	
+
 
 	// BREAK POINT
 	if(!ctrl.alive){return}

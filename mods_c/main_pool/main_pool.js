@@ -255,8 +255,11 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 
 		
 		const preview_bin = new window.gigabin(video_preview)
+		const giga_info = preview_bin.read_file('index', 'json')
+		const pframe_count = giga_info['preview_frame_count']
+		$(`flist-entry[flpath="${vpath}"]`).attr('framecount', pframe_count)
 		window.bootlegger.main_pool.video_bins[unit_id] = []
-		for (var frame of range(100)){
+		for (var frame of range(pframe_count)){
 			const imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
 			window.bootlegger.main_pool.video_bins[unit_id].push(imgu)
 			window.bootlegger.main_pool.vidframes_cache.push(await window.bootlegger.main_pool.await_img_load(imgu))
@@ -283,13 +286,20 @@ window.bootlegger.main_pool.flush_preview_frames = function()
 // todo: collapse another multiplier
 window.bootlegger.main_pool.vidscroll = function(evt, etgt)
 {
+	// element
+	const flist_entry = etgt.closest('flist-entry')
+
 	// Get bbox relative to viewport
-	const pr_id = etgt.closest('flist-entry').getAttribute('unit_id')
+	const pr_id = flist_entry.getAttribute('unit_id')
 	const rect = etgt.getBoundingClientRect()
+
+	// get frame count
+	const prf = flist_entry.getAttribute('framecount')
+
 	// Mouse position relative to element
 	const current_x = Math.abs(evt.clientX - rect.left);
 	// current / total = current percent progress
-	const scroll = int(100 * (current_x / rect.width))
+	const scroll = int(prf * (current_x / rect.width))
 	etgt.style.backgroundImage = `url(${window.bootlegger.main_pool.video_bins[pr_id][scroll]})`
 }
 

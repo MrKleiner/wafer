@@ -4,8 +4,10 @@
 class fjournal:
 	"""a file watcher"""
 	def __init__(self, srv):
-
+		from pathlib import Path
+		self.Path = Path
 		self.jdb = srv.preview_db / 'journal'
+		self.srv = srv
 
 	# takes the path to the file and the life length
 	# life in hours
@@ -13,7 +15,7 @@ class fjournal:
 		import json
 		from datetime import datetime, timedelta
 
-		flpath = Path(flpath)
+		flpath = self.Path(flpath)
 		jr_index = self.srv.util.eval_hash(str(flpath), 'sha256')
 		jr_tgt = self.jdb / f'{jr_index}.jr'
 
@@ -25,12 +27,20 @@ class fjournal:
 		# the only advantage of this is that it's PROBABLY a few milliseconds faster...
 		with open(str(jr_tgt), 'ab') as j:
 			# first line represents timestamp when to delete
-			j.write('-'.join([tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour]).encode())
+			j.write('-'.join([str(tm.tm_year), str(tm.tm_mon), str(tm.tm_mday), str(tm.tm_hour)]).encode())
 			j.write('\n'.encode())
 			# second line represents file path to delete
-			j.write(str(flpath))
+			j.write(str(flpath).encode())
+
+	# manually remove journal entry
+	def unreg_file(self, flpath):
+		tgt_unreg = self.Path(flpath)
+		unreg_index = self.srv.util.eval_hash(str(flpath), 'sha256')
+		(self.jdb / f'{unreg_index}.jr').unlink(missing_ok=True)
+
 
 	# go trough every journal file...
+	# todo: create prefixed type which says that every file with this prefix has to be deleted
 	def process_jr(self):
 		from datetime import datetime
 		from pathlib import Path
@@ -39,10 +49,11 @@ class fjournal:
 			# if the date is older than now - delete
 			fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
 			now_date = datetime.now()
-
+			# delete target file
 			if fl_date < now_date:
 				Path(jdata[1]).unlink(missing_ok=True)
-
+			# delete object task
+			jf.unlink(missing_ok=True)
 
 
 class server_logpswd_db:

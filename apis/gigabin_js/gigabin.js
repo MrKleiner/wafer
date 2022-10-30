@@ -63,6 +63,7 @@ class gigabin
 				}
 			} catch (error) {
 				console.error(error);
+				console.warn((window.URL || window.webkitURL).createObjectURL(new Blob([operate], {})))
 				throw 'Given data structure does not represent a valid gigabin format'
 			}
 
