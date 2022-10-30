@@ -14,23 +14,48 @@ function file_pool_drop_react(evt)
 	for (var fl of item_list){
 		// if ($this.lock_queue == true){return}
 		if (fl.kind && fl.kind == 'file'){
-			const getf = fl.getAsFile()
+			var getf = fl.getAsFile()
+			var full_flpath = [window.league, window.league_match, window.struct_fld, getf.name].join('/')
+			// skip items with the same paths
+			if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
+
 			$this.file_upload_q.push({
 				'file': getf,
 				'processed': false,
 				'dest': `${window.league}/${window.league_match}/${window.struct_fld}`,
 				'live_shift': 0
 			})
-			$('dlq #dlq_list').append(`<div upl_name="${getf.name}" class="dlq_item">${getf.name}</div>`)
+			
+			$('dlq #dlq_list').append(`
+				<div flpath="${full_flpath}" class="dlq_item lfs_item">
+					<div class="lfs_item_name_sizer">${getf.name}</div>
+					<div class="lfs_progress"></div>
+					<div class="lfs_item_name">${getf.name}</div>
+				</div>
+			`);
 		}
 		if (!fl.kind){
+
+
+			var full_flpath = [window.league, window.league_match, window.struct_fld, fl.name].join('/')
+			// skip items with the same paths
+			if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
+
+
 			$this.file_upload_q.push({
 				'file': fl,
 				'processed': false,
 				'dest': `${window.league}/${window.league_match}/${window.struct_fld}`,
 				'live_shift': 0
 			})
-			$('dlq #dlq_list').append(`<div upl_name="${fl.name}" class="dlq_item">${fl.name}</div>`)
+
+			$('dlq #dlq_list').append(`
+				<div flpath="${full_flpath}" class="dlq_item lfs_item">
+					<div class="lfs_item_name_sizer">${fl.name}</div>
+					<div class="lfs_progress"></div>
+					<div class="lfs_item_name">${fl.name}</div>
+				</div>
+			`);
 		}
 	}
 
@@ -83,7 +108,7 @@ $this.read_file_slice = async function(file, offs, mt='buffer')
 }
 
 // takes file as an input
-$this.hash_file = async function(inp_file, chunk_sizemb=50)
+$this.hash_file = async function(inp_file, flinf, chunk_sizemb=20)
 {
 	// create hash object
 	var sha256 = CryptoJS.algo.SHA256.create();
@@ -105,6 +130,10 @@ $this.hash_file = async function(inp_file, chunk_sizemb=50)
 		var kur = CryptoJS.lib.WordArray.create(new Uint8Array(fl_slice))
 		// stuff the fucking WordArray down cryptoJS throat
 		sha256.update(kur)
+
+		// todo: why is visual feedback here and not anywhere else
+		$(`dlq #dlq_list .dlq_item[flpath="${flinf.dest}/${flinf.file.name}"] .lfs_progress`).css('transform', `scaleX(${offs/flinf.file.size})`)
+
 		// shift fot the next chunk read
 		offs += chunk_size
 	}
@@ -175,14 +204,36 @@ $this.queue_iterator = async function(ctrl)
 // takes file and optional starting offset
 $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 {
+	// restore protocol
+	window.localStorage.setItem('upl_restore_name', inf.file.name)
+	window.localStorage.setItem('upl_restore_offs', inf['live_shift'])
+	window.localStorage.setItem('upl_restore_hash', null)
+
+
+
+	// passed file info
 	const fl = inf['file']
+
+	// connect to the GUI element
+	const echo_element = $(`dlq #dlq_list .dlq_item[flpath="${inf.dest}/${inf.file.name}"]`)
+	const echo_element_pbg = $(`dlq #dlq_list .dlq_item[flpath="${inf.dest}/${inf.file.name}"] .lfs_progress`)
+
+
+	//
+	// Calculate hash of the file. todo: Why ?
+	//
 	print('Calculating full hash...')
-	const fl_hash = await $this.hash_file(fl)
+	echo_element_pbg.addClass('hashing')
+	const fl_hash = await $this.hash_file(fl, inf)
+	window.localStorage.setItem('upl_restore_hash', fl_hash)
+	echo_element_pbg.removeClass('hashing')
+	echo_element_pbg.css('transform', `scaleX(0)`)
+
 	// BREAK POINT
 	if(!ctrl.alive){return}
 	print('Calculated full hash:', fl_hash)
 	
-	print('shit', inf['upl_token'], !inf['upl_token'])
+	print('Trying to resume:', inf['upl_token'], !inf['upl_token'])
 	// try getting the upload token
 	var lfs_upl_token = null
 	if (!inf['upl_token']){
@@ -211,7 +262,7 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 
 	// var offs = 0 + start_offs
 	var offs = 0 + inf['live_shift']
-	const chunk_size = (1024**2)*9
+	const chunk_size = (1024**2)*5
 
 	// now that we have a token - iterate over the file
 	while(true){
@@ -238,10 +289,15 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 		// shift file cursor
 		offs += chunk_size
 		inf['live_shift'] = offs
+		window.localStorage.setItem('upl_restore_offs', offs)
+		echo_element_pbg.css('transform', `scaleX(${offs/inf.file.size})`)
+
 		print('Sent chunk to server:', chunk_send_echo)
+
 		// BREAK POINT
 		if(!ctrl.alive){return}
 	}
+
 	// BREAK POINT
 	if(!ctrl.alive){return}
 
@@ -255,11 +311,28 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 		},
 		'json'
 	)
+	// once done uploading - delete the element from gui
+	echo_element.remove()
+
+	// also append newly created element to the tree
+	const fext = inf.file.name.split('.').at(-1).trim()
+	if ($all.core.allowed_img.includes(fext)){
+		$all.main_pool.spawn_image_unit(`${inf.dest}/${inf.file.name}`)
+	}
+	if ($all.core.allowed_vid.includes(fext)){
+		$all.main_pool.spawn_video_unit(`${inf.dest}/${inf.file.name}`)
+	}
+
+
 	// BREAK POINT
 	if(!ctrl.alive){return}
 
-	print('collapse response', collapse_response)
+	print('Collapse response', collapse_response)
 
 	return true
-
 }
+
+
+
+
+

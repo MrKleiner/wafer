@@ -60,45 +60,31 @@ class poolsys:
 		from pathlib import Path
 
 		matches = []
-
+		# todo: continue statements were cool
 		for match in (server.sys_root / Path(server.prms['target'])).glob('*'):
 			if match.is_dir():
 				continue
 
-			if match.suffix.strip('.').lower() in server.allowed_vid:
-				matches.append({
-					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
-					'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
-					'etype': 'vid',
-					'path': str(match),
-					'flname': match.name
-				})
-				continue
-			if match.suffix.strip('.').lower() in server.allowed_img:
-				matches.append({
-					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*20) else False),
-					'stats': f"""{((1024**2)*20)}/{os.stat(str(match)).st_size}""",
-					'etype': 'img',
-					'path': str(match),
-					'flname': match.name
-				})
-				continue
-
-			matches.append({
+			fl_info = {
 				'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
 				'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
 				'etype': 'file',
-				'path': str(match),
+				'path': str(match.relative_to(server.sys_root)),
 				'flname': match.name
-			})
+			}
+
+			if match.suffix.strip('.').lower() in server.allowed_vid:
+				fl_info['etype'] = 'vid'
+			if match.suffix.strip('.').lower() in server.allowed_img:
+				fl_info['etype'] = 'img'
+
+			matches.append(fl_info)
+
 
 		server.bin_jwrite(matches)
 		server.flush()
 
 
-
-	def list_files(self):
-		return []
 
 	# generate a lowres preview of a static image
 	def generate_pic_preview(self, img_path=None):
@@ -165,7 +151,7 @@ class poolsys:
 		from pathlib import Path
 
 		# target image filepath
-		tgt_path = Path(server.prms['image_path'])
+		tgt_path = server.sys_root / Path(server.prms['image_path'])
 
 		# if requested file is not of supported format - return error
 		if not tgt_path.suffix.strip('.').lower() in server.allowed_img:
@@ -196,7 +182,7 @@ class poolsys:
 		import shutil
 
 		# target video filepath
-		tgt_path = Path(server.prms['video_path'])
+		tgt_path = server.sys_root / Path(server.prms['video_path'])
 
 		# if requested file is not of supported format - return error
 		if not tgt_path.suffix.strip('.').lower() in server.allowed_vid:
@@ -227,10 +213,10 @@ class poolsys:
 	def load_fullres_pic(self):
 		# from pathlib import Path
 		import os
-		if os.stat(server.prms['target']).st_size > ((1024**2)*50):
+		if os.stat(server.sys_root / server.prms['target']).st_size > ((1024**2)*50):
 			return 'file is too big'.encode()
 
-		server.x_files(server.prms['target'], 'preview')
+		server.x_files((server.sys_root / server.prms['target']), 'preview')
 
 
 	# obvious todo: hardcoded 100 frames = bad

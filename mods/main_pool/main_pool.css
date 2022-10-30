@@ -397,14 +397,23 @@ mpool dlq .dlq_item.lfs_item
 	overflow: hidden;
 }
 
+mpool dlq .dlq_item.lfs_item .lfs_item_name_sizer
+{
+	padding: 3px;
+	opacity: 0;
+	/*z-index: 65535;*/
+}
+
 mpool dlq .dlq_item.lfs_item .lfs_item_name
 {
 	padding: 3px;
-	/*z-index: 65535;*/
+	position: absolute;
+	top: 0px;
 }
 
 mpool dlq .dlq_item.lfs_item .lfs_progress
 {
+	transition: .3s;
 	position: absolute;
 	top: 0px;
 	transform-origin: left;
@@ -417,7 +426,10 @@ mpool dlq .dlq_item.lfs_item .lfs_progress
 	/*mix-blend-mode: color;*/
 }
 
-
+mpool dlq .dlq_item.lfs_item .lfs_progress.hashing
+{
+	background: #DBA23F;
+}
 
 
 

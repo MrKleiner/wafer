@@ -63,6 +63,61 @@ window.print = console.log;
 const obj_url = (window.URL || window.webkitURL);
 
 
+//
+// applicable formats
+//
+
+$this.allowed_vid = [
+	'mp4',
+	'mov',
+	'webm',
+	'ts',
+	'mts',
+	'mkv',
+	'avi'
+]
+
+$this.allowed_img = [
+	'jpg',
+	'jpeg',
+	'jp2',
+	'j2k',
+	'png',
+	'tif',
+	'tiff',
+	'tga',
+	'webp',
+	'psd',
+	'apng',
+	'gif',
+	'avif',
+	'bmp',
+	'dib',
+	'raw',
+	'arw',
+	'jfif',
+	'jif',
+	'hdr'
+]
+
+$this.allowed_img_special = [
+	'tga',
+	'psd',
+	'arw',
+	'raw',
+	'hdr'
+]
+
+
+
+
+
+
+
+
+
+
+
 
 
 

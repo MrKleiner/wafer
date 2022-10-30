@@ -67,6 +67,61 @@ window.print = console.log;
 const obj_url = (window.URL || window.webkitURL);
 
 
+//
+// applicable formats
+//
+
+window.bootlegger.core.allowed_vid = [
+	'mp4',
+	'mov',
+	'webm',
+	'ts',
+	'mts',
+	'mkv',
+	'avi'
+]
+
+window.bootlegger.core.allowed_img = [
+	'jpg',
+	'jpeg',
+	'jp2',
+	'j2k',
+	'png',
+	'tif',
+	'tiff',
+	'tga',
+	'webp',
+	'psd',
+	'apng',
+	'gif',
+	'avif',
+	'bmp',
+	'dib',
+	'raw',
+	'arw',
+	'jfif',
+	'jif',
+	'hdr'
+]
+
+window.bootlegger.core.allowed_img_special = [
+	'tga',
+	'psd',
+	'arw',
+	'raw',
+	'hdr'
+]
+
+
+
+
+
+
+
+
+
+
+
 
 
 
