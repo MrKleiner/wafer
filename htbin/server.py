@@ -1,4 +1,50 @@
 
+
+
+class fjournal:
+	"""a file watcher"""
+	def __init__(self, srv):
+
+		self.jdb = srv.preview_db / 'journal'
+
+	# takes the path to the file and the life length
+	# life in hours
+	def reg_file(self, flpath, life=5):
+		import json
+		from datetime import datetime, timedelta
+
+		flpath = Path(flpath)
+		jr_index = self.srv.util.eval_hash(str(flpath), 'sha256')
+		jr_tgt = self.jdb / f'{jr_index}.jr'
+
+		jr_tgt.write_bytes(b'')
+
+		tm = (datetime.now() + timedelta(hours=int(life))).timetuple()
+
+		# todo: why bother with this shit when there's json
+		# the only advantage of this is that it's PROBABLY a few milliseconds faster...
+		with open(str(jr_tgt), 'ab') as j:
+			# first line represents timestamp when to delete
+			j.write('-'.join([tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour]).encode())
+			j.write('\n'.encode())
+			# second line represents file path to delete
+			j.write(str(flpath))
+
+	# go trough every journal file...
+	def process_jr(self):
+		from datetime import datetime
+		from pathlib import Path
+		for jf in self.jdb.glob('*.jr'):
+			jdata = jf.read_text().split('\n')
+			# if the date is older than now - delete
+			fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
+			now_date = datetime.now()
+
+			if fl_date < now_date:
+				Path(jdata[1]).unlink(missing_ok=True)
+
+
+
 class server_logpswd_db:
 	def __init__(self, obj, db_path):
 		self.db = obj
@@ -8,8 +54,6 @@ class server_allowance_db:
 	def __init__(self, obj, db_path):
 		self.db = obj
 		self.path = db_path
-
-
 
 
 
@@ -116,6 +160,12 @@ class server:
 		]
 
 
+	# journal which keeps track of files to delete
+	def journal(self):
+		return fjournal(self)
+
+
+
 	# @property
 	# def tr_type(self):
 	# 	return self._tr_type
@@ -205,3 +255,6 @@ class md_actions:
 		else:
 			self.srv.bin_write('invalid action'.encode())
 			self.srv.flush()
+
+
+
