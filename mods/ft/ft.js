@@ -336,6 +336,18 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 	// once done uploading - delete the element from gui
 	echo_element.remove()
 
+	// important todo: is there a better time to do this?
+	// generate webm preview
+	// generate_webm_preview
+	$all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'generate_webm_preview',
+			'vidpath': inf.dest
+		},
+		'text'
+	)
+
 	// also append newly created element to the tree
 	const fext = inf.file.name.split('.').at(-1).trim().lower()
 	if ($all.core.allowed_img.includes(fext) && inf.dest == $all.main_pool.current_pool_dir){

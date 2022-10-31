@@ -3,7 +3,7 @@ sys.path.append('..')
 from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
-
+# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
 class poolsys:
 
 	def __init__(self):
@@ -85,7 +85,7 @@ class poolsys:
 		server.flush()
 
 
-
+	# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
 	# generate a lowres preview of a static image
 	def generate_pic_preview(self, img_path=None):
 		import subprocess as sp
@@ -95,6 +95,7 @@ class poolsys:
 		if not img_path.is_file():
 			raise Exception('generate_pic_preview: image does not exist under the specified file path')
 
+		# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
 		ffmpeg_prms = [
 			# mpeg
 			'/usr/bin/ffmpeg',
@@ -398,8 +399,49 @@ class poolsys:
 
 
 
+	# this is the only obvious way of doing this
+	# aka calling this from js and not waiting for it to return anything
+	def generate_webm_preview(self):
+		import subprocess as sp
 
+		# get path to the video
+		vid_path = server.sys_root / server.prms.get('vidpath')
+		# output dir is the lzpreviews folder
+		preview_path = vid_path.parent / 'prdb_lzpreviews' / f'{vid_path.name}.fullvidp.lzpreview.webm'
 
+		# create ffmpeg params
+		ffmpeg_prms = [
+			# ffmpeg executable
+			r'/usr/bin/ffmpeg',
+
+			# automatically discard if file exists
+			'-n',
+
+			# input file
+			'-i', str(vid_path),
+
+			# filters: clamp to width
+			'-vf', r'scale=w=min(iw\\,420):h=-2',
+
+			# audio
+			'-acodec', 'libopus',
+			'-b:a', '96k',
+
+			# video encoding shit
+			'-c:v', 'libvpx-vp9',
+			'-minrate', '50k',
+			'-b:v', '120k',
+			'-maxrate', '700k',
+
+			# output file location
+			str(preview_path)
+		]
+
+		# захуярь раммштайн
+		sp.Popen(ffmpeg_prms)
+
+		# flush the shit
+		server.flush('ok'.encode())
 
 
 
@@ -425,6 +467,7 @@ actions = md_actions(
 		'load_video_preview': 		pool_sys.load_video_preview,
 		# 'generate_vid_preview': 	pool_sys.generate_vid_preview,
 		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot
+		'generate_webm_preview':	pool_sys.generate_webm_preview
 	}
 )
 actions.eval_action()
