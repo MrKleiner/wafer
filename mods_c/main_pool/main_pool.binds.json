@@ -37,7 +37,7 @@
 		},
 		{
 			"selector": "mpool #exec_dlq_download",
-			"function": "window.bootlegger.ft.process_download_queue",
+			"function": "window.bootlegger.ft.dl_many",
 			"pass_event": false,
 			"pass_element": false,
 			"pass_params": ""

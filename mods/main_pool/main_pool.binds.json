@@ -37,7 +37,7 @@
 		},
 		{
 			"selector": "mpool #exec_dlq_download",
-			"function": "$all.ft.process_download_queue",
+			"function": "$all.ft.dl_many",
 			"pass_event": false,
 			"pass_element": false,
 			"pass_params": ""

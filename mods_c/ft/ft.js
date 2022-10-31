@@ -16,51 +16,50 @@ function file_pool_drop_react(evt)
 
 	// iterate over shit and add them to the raw queue
 	for (var fl of item_list){
-		// if (window.bootlegger.ft.lock_queue == true){return}
-		if (fl.kind && fl.kind == 'file'){
-			var getf = fl.getAsFile()
-			var full_flpath = [window.league, window.league_match, window.struct_fld, getf.name].join('/')
-			// skip items with the same paths
-			if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
 
-			window.bootlegger.ft.file_upload_q.push({
-				'file': getf,
-				'processed': false,
-				'dest': `${window.league}/${window.league_match}/${window.struct_fld}`,
-				'live_shift': 0
-			})
-			
-			$('dlq #dlq_list').append(`
-				<div flpath="${full_flpath}" class="dlq_item lfs_item">
-					<div class="lfs_item_name_sizer">${getf.name}</div>
-					<div class="lfs_progress"></div>
-					<div class="lfs_item_name">${getf.name}</div>
-				</div>
-			`);
+		// restore protocol
+		const rst_protocol = window.localStorage.getObj('restore_protocol')
+
+		if (fl.kind && fl.kind == 'file'){
+			var fl_entry = fl.getAsFile()
 		}
 		if (!fl.kind){
-
-
-			var full_flpath = [window.league, window.league_match, window.struct_fld, fl.name].join('/')
-			// skip items with the same paths
-			if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
-
-
-			window.bootlegger.ft.file_upload_q.push({
-				'file': fl,
-				'processed': false,
-				'dest': `${window.league}/${window.league_match}/${window.struct_fld}`,
-				'live_shift': 0
-			})
-
-			$('dlq #dlq_list').append(`
-				<div flpath="${full_flpath}" class="dlq_item lfs_item">
-					<div class="lfs_item_name_sizer">${fl.name}</div>
-					<div class="lfs_progress"></div>
-					<div class="lfs_item_name">${fl.name}</div>
-				</div>
-			`);
+			var fl_entry = fl.getAsFile()
 		}
+
+		var full_flpath = [window.league, window.league_match, window.struct_fld, fl_entry.name].join('/')
+		var flpath_dir = `${window.league}/${window.league_match}/${window.struct_fld}`
+
+		// skip existing duplicate names
+		if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
+
+		// whether to restore or not
+		var rst_condition = rst_protocol.rst_hash && rst_protocol.rst_name == fl_entry.name && rst_protocol.rst_dest == flpath_dir
+		// if this condition was met, then delete the visual entry
+		// because for now there's only one restore point possible
+		if (rst_condition){
+			$('dlq #dlq_list .dlq_item.restore_point').remove()
+		}
+
+		var fl_obj = {
+			'upl_token': rst_condition ? rst_protocol.rst_token : null,
+			'file': fl_entry,
+			'processed': false,
+			'dest': flpath_dir,
+			'live_shift': rst_condition ? rst_protocol.rst_offs : 0,
+			'restore': rst_condition,
+			'rst_hash': rst_condition ? rst_protocol.rst_hash : null
+		}
+		window.bootlegger.ft.file_upload_q.push(fl_obj)
+
+		$('dlq #dlq_list').append(`
+			<div flpath="${full_flpath}" class="dlq_item lfs_item">
+				<div class="lfs_item_name_sizer">${fl_entry.name}</div>
+				<div class="lfs_progress"></div>
+				<div class="lfs_item_name">${fl_entry.name}</div>
+			</div>
+		`);
+
 	}
 
 	window.bootlegger.ft.upload_queue.resume()
@@ -203,16 +202,26 @@ window.bootlegger.ft.queue_iterator = async function(ctrl)
 
 
 
+if (!window.localStorage.getObj('restore_protocol')){
+	window.localStorage.setObj('restore_protocol', {})
+}
 
 
 // takes file and optional starting offset
 window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 {
+	// if restore point exists - do not overwrite it
+	const do_rst = !!window.localStorage.getObj('restore_protocol').rst_hash && !inf.restore
 	// restore protocol
-	window.localStorage.setItem('upl_restore_name', inf.file.name)
-	window.localStorage.setItem('upl_restore_offs', inf['live_shift'])
-	window.localStorage.setItem('upl_restore_hash', null)
-
+	var rst_protocol = {
+		'rst_token': null,
+		'rst_dest': inf.dest,
+		'rst_name': inf.file.name,
+		'rst_offs': inf['live_shift'],
+		'rst_hash': null,
+		'collapsed': false
+	}
+	do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
 
 
 	// passed file info
@@ -228,8 +237,9 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	//
 	print('Calculating full hash...')
 	echo_element_pbg.addClass('hashing')
-	const fl_hash = await window.bootlegger.ft.hash_file(fl, inf)
-	window.localStorage.setItem('upl_restore_hash', fl_hash)
+	const fl_hash = (inf.restore && inf['rst_hash']) ? inf['rst_hash'] : await window.bootlegger.ft.hash_file(fl, inf)
+	rst_protocol['rst_hash'] = fl_hash
+	do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
 	echo_element_pbg.removeClass('hashing')
 	echo_element_pbg.css('transform', `scaleX(0)`)
 
@@ -238,6 +248,7 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	print('Calculated full hash:', fl_hash)
 	
 	print('Trying to resume:', inf['upl_token'], !inf['upl_token'])
+
 	// try getting the upload token
 	var lfs_upl_token = null
 	if (!inf['upl_token']){
@@ -256,6 +267,8 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	}else{
 		var lfs_upl_token = inf['upl_token']
 	}
+	rst_protocol['rst_token'] = lfs_upl_token
+	do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
 	inf['upl_token'] = lfs_upl_token
 
 	// BREAK POINT
@@ -267,6 +280,9 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 	// var offs = 0 + start_offs
 	var offs = 0 + inf['live_shift']
 	const chunk_size = (1024**2)*5
+
+	// this is needed when shit was resumed
+	echo_element_pbg.css('transform', `scaleX(${offs/inf.file.size})`)
 
 	// now that we have a token - iterate over the file
 	while(true){
@@ -293,7 +309,9 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 		// shift file cursor
 		offs += chunk_size
 		inf['live_shift'] = offs
-		window.localStorage.setItem('upl_restore_offs', offs)
+		// rst_protocol['rst_offs'] = offs - chunk_size
+		rst_protocol['rst_offs'] = offs
+		do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
 		echo_element_pbg.css('transform', `scaleX(${offs/inf.file.size})`)
 
 		print('Sent chunk to server:', chunk_send_echo)
@@ -315,15 +333,19 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 		},
 		'json'
 	)
+	rst_protocol['collapsed'] = true
+	do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
+	do_rst ? null : window.localStorage.setObj('restore_protocol', {})
+
 	// once done uploading - delete the element from gui
 	echo_element.remove()
 
 	// also append newly created element to the tree
-	const fext = inf.file.name.split('.').at(-1).trim()
-	if (window.bootlegger.core.allowed_img.includes(fext)){
+	const fext = inf.file.name.split('.').at(-1).trim().lower()
+	if (window.bootlegger.core.allowed_img.includes(fext) && inf.dest == window.bootlegger.main_pool.current_pool_dir){
 		window.bootlegger.main_pool.spawn_image_unit(`${inf.dest}/${inf.file.name}`)
 	}
-	if (window.bootlegger.core.allowed_vid.includes(fext)){
+	if (window.bootlegger.core.allowed_vid.includes(fext) && inf.dest == window.bootlegger.main_pool.current_pool_dir){
 		window.bootlegger.main_pool.spawn_video_unit(`${inf.dest}/${inf.file.name}`)
 	}
 
@@ -337,6 +359,23 @@ window.bootlegger.ft.lfs_upload = async function(ctrl, inf, start_offs=0)
 }
 
 
+
+
+
+
+window.bootlegger.ft.dl_many = async function()
+{
+	const manydl_response = await window.bootlegger.core.py_send(
+		'ft/download',
+		{
+			'action': 'create_zip'
+		},
+		JSON.stringify(window.bootlegger.main_pool.media_selection),
+		'json'
+	)
+
+	window.open(manydl_response['cmd'])
+}
 
 
 

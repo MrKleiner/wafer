@@ -132,7 +132,7 @@ class iguana
 		// Other useful extensions
 		//
 
-		window.localStorage.__proto__.getObject = function(itemname){
+		window.localStorage.__proto__.getObj = function(itemname){
 			const got_item = window.localStorage.getItem(itemname)
 			try {
 				return JSON.parse(got_item)
@@ -140,7 +140,7 @@ class iguana
 				return got_item
 			}
 		}
-		window.localStorage.__proto__.setObject = function(itemname, itemval){
+		window.localStorage.__proto__.setObj = function(itemname, itemval){
 			try {
 				window.localStorage.setItem(itemname, JSON.stringify(itemval))
 			} catch (error) {

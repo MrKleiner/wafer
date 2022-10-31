@@ -80,7 +80,8 @@ class uploadsys:
 
 	# add bytes to LFS
 	def lfs_add(self):
-		import json
+		import json, time
+		code_timings = time.time()
 
 		lfs_tgt = server.tmp_dir / f"""{server.prms.get('upload_token')}.target"""
 
@@ -106,13 +107,16 @@ class uploadsys:
 
 		server.bin_jwrite({
 			'received_chunk_hash': info_obj['last_chunk_hash'],
-			'full_hash': info_obj['last_full_hash']
+			'full_hash': info_obj['last_full_hash'],
+			'timings': time.time() - code_timings
 		})
 		server.flush()
 
 
 	def lfs_collapse(self):
-		import shutil, json
+		import shutil, json, time
+
+		code_timings = time.time()
 
 		lfs_tgt = server.tmp_dir / f"""{server.prms.get('upload_token')}.target"""
 
@@ -139,14 +143,18 @@ class uploadsys:
 		# remove the info object
 		lfs_tgt.with_suffix('.object').unlink(missing_ok=True)
 
+		# important todo: there are way better places to do this...
+		fj = server.journal()
+		fj.process_jr()
+
 		# return hash of the destination file
 		server.bin_jwrite({
 			'status': 'lizard',
 			'server_checksum': server.util.hash_file(dest_loc, 'sha256'),
-			'declared_checksum': info_obj['declared_hash']
+			'declared_checksum': info_obj['declared_hash'],
+			'timings': time.time() - code_timings
 		})
 		server.flush()
-
 
 
 

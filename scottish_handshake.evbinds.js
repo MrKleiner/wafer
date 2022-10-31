@@ -52,7 +52,7 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('mpool flist flist-entry.struct_entry')){window.bootlegger.main_pool.list_media(event.target.closest('mpool flist flist-entry.struct_entry'))}
 	if (event.target.closest('mpool[grid] flist flist-entry.media_entry:not(.lfs_entry) etype, mpool[list] flist flist-entry.media_entry:not(.lfs_entry)')){window.bootlegger.main_pool.load_fullres_media(event.target.closest('mpool[grid] flist flist-entry.media_entry:not(.lfs_entry) etype, mpool[list] flist flist-entry.media_entry:not(.lfs_entry)'))}
 	if (event.target.closest('img#pic_fullres_preview')){window.bootlegger.main_pool.viewing_fullres = false;$('img#pic_fullres_preview').remove()}
-	if (event.target.closest('mpool #exec_dlq_download')){window.bootlegger.ft.process_download_queue()}
+	if (event.target.closest('mpool #exec_dlq_download')){window.bootlegger.ft.dl_many()}
 	if (event.target.closest('mpool #select_all_items')){window.bootlegger.main_pool.select_all_in_folder()}
 	if (event.target.closest('mpool')){$('flist-entry').removeClass('arrow_cycle_hint')}
 	if (event.target.closest('#mpool_tobpar #vispath .vispath_fld')){window.bootlegger.main_pool.vispath_clicker(event.target.closest('#mpool_tobpar #vispath .vispath_fld'))}

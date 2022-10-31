@@ -102,7 +102,7 @@ img#pic_fullres_preview
 	background-repeat: no-repeat;
 	background-size: contain;
 	background-image: url('../../assets/upload.png');
-	z-index: 655356;
+	z-index: 214748364;
 	/*pointer-events: none;*/
 }
 
@@ -452,7 +452,11 @@ dlq #dlq_title, dlq #dlq_head
 
 
 
-/*VIS PATH*/
+/*
+================================
+VIS PATH
+================================
+*/
 
 #vispath
 {
@@ -486,4 +490,55 @@ dlq #dlq_title, dlq #dlq_head
 {
 	outline: 1px solid lime;
 	background: rgba(255, 255, 255, 0.1);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+================================
+RESTORE POINT
+================================
+*/
+
+dlq #dlq_list .dlq_item.restore_point .rst_point_warning
+{
+	width: 100%;
+	height: 20px;
+	background: url('../../assets/stripes.jpg');
+	background-position: top;
+	background-size: contain;
+	background-repeat: repeat;
+}
+
+dlq #dlq_list .dlq_item.restore_point .warn_entry
+{
+	padding: 3px;
+	font-size: 15px;
+	opacity: 0.8;
+	word-break: break-all;
+}
+
+dlq #dlq_list .dlq_item.restore_point .warn_entry.dest, dlq #dlq_list .dlq_item.restore_point .warn_entry.checksum
+{
+	margin-bottom: 7px;
+}
+
+dlq #dlq_list .dlq_item.restore_point .dest
+{
+	color: #E03B33;
+}
+dlq #dlq_list .dlq_item.restore_point .dest.rst_dest_valid
+{
+	color: #3BE45B;
 }

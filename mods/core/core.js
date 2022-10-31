@@ -358,7 +358,7 @@ $(document).ready(function(){
 	$this.browser_detection()
 	$all.main_pool.module_loader();
 	$this.profiler();
-	wtf_kill_js();
+	// wtf_kill_js();
 });
 
 
@@ -489,11 +489,11 @@ $this.py_send = async function(mod='', prms={}, payload='', load_as='text')
 					resolve(bin)
 					return
 				}
-				console.warn('PyGet Warn: falling back to default data type');
+				console.warn('PySend Warn: falling back to default data type');
 				resolve(lizard.UTF8ArrToStr(bin))
 
 			} catch (error) {
-				console.warn('PyGet Error', lizard.UTF8ArrToStr(bin), error)
+				console.warn('PySend Error', lizard.UTF8ArrToStr(bin), error)
 			}
 
 		});

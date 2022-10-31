@@ -31,6 +31,7 @@ window.bootlegger.main_pool.module_loader = async function()
 {
 	print('start loading mpool')
 	await window.bootlegger.core.sysloader('main_pool', true);
+	window.bootlegger.main_pool.restore_protocol()
 	await window.bootlegger.main_pool.load_root_dir(false)
 	await window.bootlegger.main_pool.go_dir_path()
 }
@@ -231,12 +232,15 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 		const unit_id = lizard.rndwave(32, 'def')
 
 		const video_entry = $(`
-			<flist-entry unit_id="${unit_id}" class="media_entry lfs_entry" flpath="${vpath}" flname="${fname}">
+			<flist-entry unit_id="${unit_id}" class="media_entry lfs_entry mde_vid" flpath="${vpath}" flname="${fname}">
 				<etype style="background-image: url(./assets/spinning_circle.svg)" vid>
 				</etype>
 				<ename>${fname}</ename>
 			</flist-entry>
 		`)
+		// todo: is there a smarter way of managing this?
+		// for now the existing entry is replaced with a new one
+		$(`mpool flist flist-entry[flname="${fname}"]`).remove()
 		$('mpool flist').append(video_entry)
 
 		var video_preview = window.bootlegger.main_pool.preview_cache_pull(vpath)
@@ -309,14 +313,19 @@ window.bootlegger.main_pool.spawn_image_unit = async function(imgpath)
 	return new Promise(async function(resolve, reject){
 		// todo: the split solution is just rubbish
 		const fname = imgpath.split('/').at(-1).trim()
+		// todo: class mde_img goes against consistency
+		// either mark element with img/vid/file attribute as the whole
+		// or comeup with something better
 		const media_entry = $(`
-			<flist-entry class="media_entry" flpath="${imgpath}" flname="${fname}">
+			<flist-entry class="media_entry mde_img" flpath="${imgpath}" flname="${fname}">
 				<etype style="background-image: url(./assets/spinning_circle.svg)" img>
 				</etype>
 				<ename>${fname}</ename>
 			</flist-entry>
 		`)
-
+		// todo: is there a smarter way of managing this?
+		// for now the existing entry is replaced with a new one
+		$(`mpool flist flist-entry[flname="${fname}"]`).remove()
 		$('mpool flist').append(media_entry)
 
 		// try pulling shit from cache
@@ -444,6 +453,9 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 
 	window.struct_fld = fld_name;
 	window.bootlegger.main_pool.update_vis_path()
+
+	// remove video preview frames from browser cache
+	// todo: actually keep them, like normal cache (aka not bigger than ...) ?
 	window.bootlegger.main_pool.flush_preview_frames()
 
 	// kill previous iterator
@@ -611,8 +623,8 @@ window.bootlegger.main_pool.select_all_in_folder = function(evt)
 
 
 	// if everything out of everything is selected - deselect everything
-	const selected = $('flist-entry.media_entry.media_entry_selected').length
-	const everything = $('flist-entry.media_entry').length
+	const selected = $('flist-entry.media_entry.media_entry_selected.mde_img').length
+	const everything = $('flist-entry.media_entry.mde_img').length
 
 	if (selected == everything){
 		// deselect
@@ -669,7 +681,7 @@ window.bootlegger.main_pool.download_image_from_fullres = function(evt, elm)
 // ==================================================
 window.bootlegger.main_pool.update_vis_path = function()
 {
-	// this goes to the url
+	// this goes to the url and global context
 	const ctext = (
 		('root/')
 		+
@@ -677,8 +689,9 @@ window.bootlegger.main_pool.update_vis_path = function()
 		+
 		(window.league_match ? (window.league_match + '/') : '')
 		+
-		(window.struct_fld ? (window.struct_fld + '/') : '')
+		(window.struct_fld ? window.struct_fld : '')
 	)
+	window.bootlegger.main_pool.current_pool_dir = ctext.replace('root/', '')
 
 	// and this appears on the page
 	const cpath = (
@@ -700,6 +713,15 @@ window.bootlegger.main_pool.update_vis_path = function()
 	queryParams.set('f', ctext);
 	// important todo: use URL decode instead of simple replacement stuff
 	window.history.replaceState(null, null, '?'+queryParams.toString().replaceAll('%2F', '/'));
+
+	// restore point stuff
+	const rst_path = window.localStorage.getObj('restore_protocol').rst_dest
+	print('PLEASE NO', `root/${rst_path}`.strip('/'), ctext.strip('/'))
+	if (`root/${rst_path}`.strip('/') == ctext.strip('/')){
+		$('dlq #dlq_list .dlq_item.restore_point .dest').addClass('rst_dest_valid')
+	}else{
+		$('dlq #dlq_list .dlq_item.restore_point .dest').removeClass('rst_dest_valid')
+	}
 }
 
 window.bootlegger.main_pool.vispath_clicker = async function(vp)
@@ -732,3 +754,38 @@ window.bootlegger.main_pool.vispath_clicker = async function(vp)
 
 
 
+
+
+
+
+// ==================================================
+// 					Restore protocol
+// ==================================================
+window.bootlegger.main_pool.restore_protocol = function()
+{
+	// no hash no shit
+	var rst_protocol = window.localStorage.getObj('restore_protocol')
+	if (!rst_protocol.rst_hash){
+		print('Restore Protocol:', 'no valid hash found')
+		return
+	}
+
+	// recreate queue
+	print('RESTORE POINT EXISTS !')
+
+	$('dlq #dlq_list').append(`
+		<div class="dlq_item lfs_item restore_point">
+			<div class="lfs_item_name_sizer">${rst_protocol.rst_name}</div>
+			<div class="lfs_progress"></div>
+			<div class="lfs_item_name">${rst_protocol.rst_name}</div>
+			<div class="rst_point_warning_info">
+				<div class="warn_entry">Target Path:</div>
+				<div class="warn_entry dest">${rst_protocol.rst_dest}</div>
+				<div class="warn_entry">Checksum:</div>
+				<div class="warn_entry checksum">${rst_protocol.rst_hash}</div>
+				<div class="warn_entry">Byte Offset: ${rst_protocol.rst_offs}</div>
+			</div>
+			<div class="rst_point_warning"></div>
+		</div>
+	`);
+}
