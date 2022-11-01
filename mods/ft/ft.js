@@ -30,7 +30,7 @@ function file_pool_drop_react(evt)
 		if (document.querySelector(`dlq #dlq_list .dlq_item[flpath="${full_flpath}"]`)){continue}
 
 		// whether to restore or not
-		var rst_condition = rst_protocol.rst_hash && rst_protocol.rst_name == fl_entry.name && rst_protocol.rst_dest == flpath_dir
+		var rst_condition = rst_protocol.rst_hash && rst_protocol.rst_name == fl_entry.name && rst_protocol.rst_dest == flpath_dir && rst_protocol.collapsed != true
 		// if this condition was met, then delete the visual entry
 		// because for now there's only one restore point possible
 		if (rst_condition){
@@ -275,7 +275,7 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 
 	// var offs = 0 + start_offs
 	var offs = 0 + inf['live_shift']
-	const chunk_size = (1024**2)*5
+	const chunk_size = (1024**2)*10
 
 	// this is needed when shit was resumed
 	echo_element_pbg.css('transform', `scaleX(${offs/inf.file.size})`)
@@ -338,12 +338,11 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 
 	// important todo: is there a better time to do this?
 	// generate webm preview
-	// generate_webm_preview
 	$all.core.py_get(
 		'poolsys/poolsys',
 		{
 			'action': 'generate_webm_preview',
-			'vidpath': inf.dest
+			'vidpath': `${inf.dest}/${inf.file.name}`
 		},
 		'text'
 	)

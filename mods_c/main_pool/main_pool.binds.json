@@ -62,6 +62,20 @@
 			"pass_event": false,
 			"pass_element": true,
 			"pass_params": ""
+		},
+		{
+			"selector": "flist-entry.mde_vid",
+			"function": "window.bootlegger.main_pool.open_webm_preview",
+			"pass_event": false,
+			"pass_element": true,
+			"pass_params": ""
+		},
+		{
+			"selector": "#webm_preview #webm_video_waveform",
+			"function": "window.bootlegger.main_pool.nav_webm_audio",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
 		}
 	],
 

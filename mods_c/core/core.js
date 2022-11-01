@@ -346,7 +346,8 @@ window.bootlegger.core.browser_detection = function()
 
 	window.user_browser = BrowserDetect
 
-	if (BrowserDetect.browser.lower() == 'safari'){
+	// NOBODY's going to use mobile!
+	if (BrowserDetect.browser.lower() == 'safari' && !isMobile.any){
 		$('body').html(`
 			<div style="display: flex; font-size: 3.1vw; flex-direction: column; width: 100%; height: 100%; align-items: center; justify-content: center">
 				<h1 style="color: red">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!</h1>

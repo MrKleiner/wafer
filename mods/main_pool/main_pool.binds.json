@@ -62,6 +62,20 @@
 			"pass_event": false,
 			"pass_element": true,
 			"pass_params": ""
+		},
+		{
+			"selector": "flist-entry.mde_vid",
+			"function": "$this.open_webm_preview",
+			"pass_event": false,
+			"pass_element": true,
+			"pass_params": ""
+		},
+		{
+			"selector": "#webm_preview #webm_video_waveform",
+			"function": "$this.nav_webm_audio",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
 		}
 	],
 

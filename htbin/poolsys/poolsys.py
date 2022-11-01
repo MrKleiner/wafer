@@ -412,7 +412,7 @@ class poolsys:
 		# create ffmpeg params
 		ffmpeg_prms = [
 			# ffmpeg executable
-			r'/usr/bin/ffmpeg',
+			'/usr/bin/ffmpeg',
 
 			# automatically discard if file exists
 			'-n',
@@ -421,7 +421,7 @@ class poolsys:
 			'-i', str(vid_path),
 
 			# filters: clamp to width
-			'-vf', r'scale=w=min(iw\\,420):h=-2',
+			'-vf', 'scale=w=min(iw\\,420):h=-2',
 
 			# audio
 			'-acodec', 'libopus',
@@ -437,15 +437,56 @@ class poolsys:
 			str(preview_path)
 		]
 
+		# raise Exception(str(vid_path))
+
+		# ffmpeg -i video.mp4 -f mp3 -ab 192000 -vn music.mp3
+		audio_prms = [
+			# ffmpeg executable
+			'/usr/bin/ffmpeg',
+
+			# automatically discard if file exists
+			'-n',
+
+			# input file
+			'-i', str(vid_path),
+
+			# audio
+			'-acodec', 'aac',
+			'-b:a', '96k',
+
+			# vn = no video
+			'-vn',
+
+			# output file location
+			str(preview_path.with_suffix('.aac'))
+		]
+		# webp = None
+		# with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+		# 	webp = img_pipe.stdout.read()
+
+		# webp = None
+		# with sp.Popen(audio_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+		# 	webp = img_pipe.stdout.read()
+
+
 		# захуярь раммштайн
+		sp.Popen(audio_prms)
 		sp.Popen(ffmpeg_prms)
 
-		# flush the shit
+		# flush the shit ?
 		server.flush('ok'.encode())
 
 
+	# important todo: check whether the file exists before loading
+	# load lowres webm preview
+	def get_webm(self):
+		tgt_path = server.sys_root / server.prms.get('vidpath')
+		server.x_files((tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.webm'), 'webmvideo.webm')
 
-
+	# load audio of the file
+	def get_webm_audio(self):
+		tgt_path = server.sys_root / server.prms.get('vidpath')
+		server.x_files((tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.aac'), 'audio.aac')
 
 
 
@@ -466,8 +507,10 @@ actions = md_actions(
 		'load_fullres_pic': 		pool_sys.load_fullres_pic,
 		'load_video_preview': 		pool_sys.load_video_preview,
 		# 'generate_vid_preview': 	pool_sys.generate_vid_preview,
-		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot
-		'generate_webm_preview':	pool_sys.generate_webm_preview
+		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
+		'generate_webm_preview':	pool_sys.generate_webm_preview,
+		'get_webm':					pool_sys.get_webm,
+		'get_webm_audio':			pool_sys.get_webm_audio
 	}
 )
 actions.eval_action()

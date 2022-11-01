@@ -45,15 +45,18 @@ class fjournal:
 		from datetime import datetime
 		from pathlib import Path
 		for jf in self.jdb.glob('*.jr'):
-			jdata = jf.read_text().split('\n')
-			# if the date is older than now - delete
-			fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
-			now_date = datetime.now()
-			# delete target file
-			if fl_date < now_date:
-				Path(jdata[1]).unlink(missing_ok=True)
-			# delete object task
-			jf.unlink(missing_ok=True)
+			try:
+				jdata = jf.read_text().split('\n')
+				# if the date is older than now - delete
+				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
+				now_date = datetime.now()
+				# delete target file
+				if fl_date < now_date:
+					Path(jdata[1]).unlink(missing_ok=True)
+				# delete object task
+				jf.unlink(missing_ok=True)
+			except Exception as e:
+				continue
 
 
 class server_logpswd_db:

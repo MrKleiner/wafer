@@ -6,5 +6,8 @@
 	// database with previews and a temp dir
 	"preview_db": "/home/basket/pr_db",
 	// root of the target file system
-	"system_root": "/home/basket/scotland"
+	"system_root": "/home/basket/scotland",
+
+	// ffmpeg stuff (required)
+	"ffmpeg": ""
 }

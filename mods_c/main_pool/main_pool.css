@@ -542,3 +542,56 @@ dlq #dlq_list .dlq_item.restore_point .dest.rst_dest_valid
 {
 	color: #3BE45B;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#webm_preview
+{
+	position: fixed;
+	flex-direction: column;
+	display: flex;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.8);
+	backdrop-filter: blur(10px);
+}
+
+#webm_preview #webm_video_player
+{
+	width: 100%;
+	height: 40%;
+}
+#webm_preview #webm_video_player video
+{
+	width: 100%;
+	height: 100%;
+}
+
+#webm_video_waveform, #webm_video_waveform wave, #webm_video_waveform canvas
+{
+	/*width: 100% !important;*/
+}

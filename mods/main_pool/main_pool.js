@@ -761,8 +761,8 @@ $this.restore_protocol = function()
 {
 	// no hash no shit
 	var rst_protocol = window.localStorage.getObj('restore_protocol')
-	if (!rst_protocol.rst_hash){
-		print('Restore Protocol:', 'no valid hash found')
+	if (!rst_protocol.rst_hash || rst_protocol.collapsed == true){
+		print('Restore Protocol:', 'no valid hash found or the entry was collapsed')
 		return
 	}
 
@@ -784,4 +784,108 @@ $this.restore_protocol = function()
 			<div class="rst_point_warning"></div>
 		</div>
 	`);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ==================================================
+// 					Cool webm previews
+// ==================================================
+$this.open_webm_preview = async function(elm)
+{
+	const flpath = elm.closest('flist-entry').getAttribute('flpath')
+
+	// indicate loading
+	$('body #webm_preview').remove()
+
+	// <img src="../assets/spinning_circle.svg">
+
+	// load video and audio
+	const webm_vid =  await $all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'get_webm',
+			'vidpath': flpath
+		},
+		'blob_url'
+	)
+	// load video and audio
+	const webm_audio =  await $all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'get_webm_audio',
+			'vidpath': flpath
+		},
+		'blob'
+	)
+
+
+	window.test_vid = webm_vid
+	window.test_vid_sound = webm_audio
+	$('body').append(`
+		<div id="webm_preview">
+			<div id="webm_video_player">
+				<video src="${webm_vid}"></video>
+			</div>
+			<div id="webm_video_waveform"></div>
+		</div>
+	`)
+	print('Done loading webm shite', webm_vid, webm_audio)
+
+	const fuckoff = document.querySelector('#webm_video_player video')
+	fuckoff.currentTime = 60*(60*90)
+	await fuckoff.play()
+
+	$this.wave_ctrl = WaveSurfer.create({
+		container: '#webm_video_waveform',
+		waveColor: 'violet',
+		progressColor: 'purple',
+		fillParent: true,
+		scrollParent: false,
+		responsive: true
+	});
+
+	$this.wave_ctrl.loadBlob(window.test_vid_sound);
+	
+	$this.wave_ctrl.on('ready', function () {
+		$this.wave_ctrl.setVolume(0);
+		fuckoff.currentTime = 0;
+		$this.wave_ctrl.play();
+		fuckoff.play()
+	});
+}
+
+
+
+// navigation
+$this.nav_webm_audio = function(evt, elm)
+{
+	// Get bbox relative to viewport
+	const rect = elm.getBoundingClientRect()
+
+	// get total length of the video in seconds
+	// todo: store this in the window for faster access
+	const vid = document.querySelector('#webm_video_player video')
+
+	// Mouse position relative to element
+	const current_x = Math.abs(evt.clientX - rect.left);
+	// current / total = current percent progress
+	const scroll = vid.duration * (current_x / rect.width)
+	print('Scroll is', {
+		'clientx': evt.clientX,
+		'rectleft': rect.left,
+		'duration': vid.duration,
+		'scroll': scroll
+	})
+	vid.currentTime = scroll
 }

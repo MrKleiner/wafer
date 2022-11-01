@@ -56,6 +56,8 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('mpool #select_all_items')){window.bootlegger.main_pool.select_all_in_folder()}
 	if (event.target.closest('mpool')){$('flist-entry').removeClass('arrow_cycle_hint')}
 	if (event.target.closest('#mpool_tobpar #vispath .vispath_fld')){window.bootlegger.main_pool.vispath_clicker(event.target.closest('#mpool_tobpar #vispath .vispath_fld'))}
+	if (event.target.closest('flist-entry.mde_vid')){window.bootlegger.main_pool.open_webm_preview(event.target.closest('flist-entry.mde_vid'))}
+	if (event.target.closest('#webm_preview #webm_video_waveform')){window.bootlegger.main_pool.nav_webm_audio(tr_event, event.target.closest('#webm_preview #webm_video_waveform'))}
 
 
 
