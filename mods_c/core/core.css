@@ -320,6 +320,7 @@ Global App Tobar
 
 #topbar_name
 {
+	pointer-events: none;
 	display: flex;
 	align-items: center;
 	justify-content: center;
