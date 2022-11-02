@@ -58,6 +58,8 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('#mpool_tobpar #vispath .vispath_fld')){window.bootlegger.main_pool.vispath_clicker(event.target.closest('#mpool_tobpar #vispath .vispath_fld'))}
 	if (event.target.closest('flist-entry.mde_vid')){window.bootlegger.main_pool.open_webm_preview(event.target.closest('flist-entry.mde_vid'))}
 	if (event.target.closest('#webm_preview #webm_video_waveform')){window.bootlegger.main_pool.nav_webm_audio(tr_event, event.target.closest('#webm_preview #webm_video_waveform'))}
+	if (event.target.closest('#webm_preview #timeline_ctrl #tl_stop')){window.bootlegger.main_pool.pause_webm()}
+	if (event.target.closest('#webm_preview #timeline_ctrl #tl_play')){window.bootlegger.main_pool.play_webm()}
 
 
 
@@ -116,6 +118,7 @@ document.addEventListener('contextmenu', tr_event => {
 
 	if (event.target.closest('flist-entry.media_entry:not(.lfs_entry)')){window.bootlegger.main_pool.add_media_entry_to_selection(tr_event, event.target.closest('flist-entry.media_entry:not(.lfs_entry)'))}
 	if (event.target.closest('img#pic_fullres_preview')){window.bootlegger.main_pool.download_image_from_fullres(tr_event, event.target.closest('img#pic_fullres_preview'))}
+	if (event.target.closest('flist-entry.media_entry.mde_vid')){window.bootlegger.main_pool.video_dl(tr_event, event.target.closest('flist-entry.media_entry.mde_vid'))}
 
 
 });
@@ -130,6 +133,9 @@ document.addEventListener('keydown', tr_event => {
 
 	if (event.target.closest('body')){window.bootlegger.main_pool.img_cycle_lr(tr_event, event.target.closest('body'))}
 	if (event.target.closest('body')){window.bootlegger.main_pool.select_all_in_folder(tr_event)}
+	if (event.target.closest('body')){window.bootlegger.main_pool.toggle_webm_play(tr_event)}
+	if (event.target.closest('body')){window.bootlegger.main_pool.webm_skip_lr(tr_event)}
+	if (event.target.closest('body')){window.bootlegger.main_pool.close_webm_preview(tr_event)}
 
 
 });
@@ -143,6 +149,19 @@ document.addEventListener('mousemove', tr_event => {
 	// ==========================================
 
 	if (event.target.closest('flist-entry etype[vid]')){window.bootlegger.main_pool.vidscroll(tr_event, event.target.closest('flist-entry etype[vid]'))}
+
+
+});
+
+
+document.addEventListener('wheel', tr_event => {
+
+
+	// ==========================================
+	// 	main_pool main_pool
+	// ==========================================
+
+	if (event.target.closest('body')){window.bootlegger.main_pool.mwheel_adjust_volume(tr_event)}
 
 
 });

@@ -310,6 +310,8 @@ class poolsys:
 		ffmpeg_prms = [
 			# ffmpeg executable
 			'/usr/bin/ffmpeg',
+
+			'-y',
 			
 			# input file
 			'-i', str(tgt_vid),
@@ -401,8 +403,12 @@ class poolsys:
 
 	# this is the only obvious way of doing this
 	# aka calling this from js and not waiting for it to return anything
+	# important todo: store these previews in a shared database where file name is sha256 of a video OR its path
+	# to avoid duplicate previews
+	# it'd also be important to have controls like re-generating/deleting a preview
 	def generate_webm_preview(self):
 		import subprocess as sp
+		import os
 
 		# get path to the video
 		vid_path = server.sys_root / server.prms.get('vidpath')
@@ -434,7 +440,7 @@ class poolsys:
 			'-maxrate', '700k',
 
 			# output file location
-			str(preview_path)
+			str(f'{preview_path}.fuckoff.webm')
 		]
 
 		# raise Exception(str(vid_path))
@@ -460,21 +466,24 @@ class poolsys:
 			# output file location
 			str(preview_path.with_suffix('.aac'))
 		]
-		# webp = None
-		# with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-		# 	webp = img_pipe.stdout.read()
+		wat = None
+		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+			wat = img_pipe.stdout.read()
 
-		# webp = None
-		# with sp.Popen(audio_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-		# 	webp = img_pipe.stdout.read()
+		webp = None
+		with sp.Popen(audio_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+			webp = img_pipe.stdout.read()
 
 
 		# захуярь раммштайн
-		sp.Popen(audio_prms)
-		sp.Popen(ffmpeg_prms)
+		# sp.Popen(audio_prms)
+		# sp.Popen(ffmpeg_prms)
 
+		# rename stuff once done encoding
+		os.rename(str(f'{preview_path}.fuckoff.webm'), str(preview_path))
 		# flush the shit ?
-		server.flush('ok'.encode())
+		# lmao no. this will kill he python process...
+		# server.flush('ok'.encode())
 
 
 	# important todo: check whether the file exists before loading
@@ -489,8 +498,28 @@ class poolsys:
 		server.x_files((tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.aac'), 'audio.aac')
 
 
+	# todo: temp. donwload a video
+	def dl_vid(self):
+		tgt_p = server.sys_root / server.prms['target']
+		server.x_files(tgt_p, tgt_p.name)
 
+	# todo: temp. donwload a video
+	# get the actual fucking command you genius
+	def get_dl_vid(self):
+		from urllib.parse import urlencode
 
+		tgt_p = server.sys_root / server.prms['target']
+
+		target_file_query = {
+			'action': 'dl_vid',
+			'auth': 'ftp',
+			'dl_tgt': server.prms['target']
+		}
+		server.bin_jwrite({
+			'status': ('lizard' if tgt_p.is_file() else 'fuckoff'),
+			'cmd': f"""htbin/poolsys/poolsys.py?{urlencode(target_file_query)}"""
+		})
+		server.flush()
 
 
 
@@ -510,7 +539,10 @@ actions = md_actions(
 		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
 		'generate_webm_preview':	pool_sys.generate_webm_preview,
 		'get_webm':					pool_sys.get_webm,
-		'get_webm_audio':			pool_sys.get_webm_audio
+		'get_webm_audio':			pool_sys.get_webm_audio,
+		# todo: temp here: download a video
+		'get_dl_vid':				pool_sys.get_dl_vid,
+		'dl_vid':					pool_sys.dl_vid,
 	}
 )
 actions.eval_action()

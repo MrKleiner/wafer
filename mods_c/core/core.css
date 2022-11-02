@@ -219,7 +219,20 @@ html[static] #pages_pool
 	overflow: hidden;
 }
 
+.core_hidden
+{
+	display: none !important;
+}
 
+.core_ghost_hidden
+{
+	visibility: hidden !important;
+}
+
+.core_hidden_opacity
+{
+	opacity: 0 !important;
+}
 
 #nav_go_home
 {

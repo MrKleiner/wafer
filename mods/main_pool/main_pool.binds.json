@@ -70,13 +70,34 @@
 			"pass_element": true,
 			"pass_params": ""
 		},
+
+
+
+
+
+
 		{
 			"selector": "#webm_preview #webm_video_waveform",
 			"function": "$this.nav_webm_audio",
 			"pass_event": true,
 			"pass_element": true,
 			"pass_params": ""
+		},
+		{
+			"selector": "#webm_preview #timeline_ctrl #tl_stop",
+			"function": "$this.pause_webm",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "#webm_preview #timeline_ctrl #tl_play",
+			"function": "$this.play_webm",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
 		}
+
 	],
 
 	"keydown": [
@@ -90,6 +111,27 @@
 		{
 			"selector": "body",
 			"function": "$this.select_all_in_folder",
+			"pass_event": true,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "body",
+			"function": "$this.toggle_webm_play",
+			"pass_event": true,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "body",
+			"function": "$this.webm_skip_lr",
+			"pass_event": true,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "body",
+			"function": "$this.close_webm_preview",
 			"pass_event": true,
 			"pass_element": false,
 			"pass_params": ""
@@ -109,6 +151,13 @@
 			"pass_event": true,
 			"pass_element": true,
 			"pass_params": ""
+		},
+		{
+			"selector": "flist-entry.media_entry.mde_vid",
+			"function": "$this.video_dl",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
 		}
 	],
 	"mousemove": [
@@ -117,6 +166,15 @@
 			"function": "$this.vidscroll",
 			"pass_event": true,
 			"pass_element": true,
+			"pass_params": ""
+		}
+	],
+	"wheel": [
+		{
+			"selector": "body",
+			"function": "$this.mwheel_adjust_volume",
+			"pass_event": true,
+			"pass_element": false,
 			"pass_params": ""
 		}
 	]

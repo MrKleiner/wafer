@@ -103,7 +103,9 @@ class uploadsys:
 
 		# now evaluate full hash
 		# todo: why?
-		info_obj['last_full_hash'] = server.util.hash_file(lfs_tgt, 'sha256')
+		# don't do this for now
+		# info_obj['last_full_hash'] = server.util.hash_file(lfs_tgt, 'sha256')
+		info_obj['last_full_hash'] = None
 
 		server.bin_jwrite({
 			'received_chunk_hash': info_obj['last_chunk_hash'],

@@ -497,8 +497,25 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 
 
 
+// ==================================================
+// 			DOwnload video RMB. Todo: move to ft.js ?
+// ==================================================
+window.bootlegger.main_pool.video_dl = async function(evt, elem)
+{
+	evt.preventDefault()
+	const dl_cmd = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'get_dl_vid',
+			'target': elem.getAttribute('flpath')
+		},
+		'json'
+	)
 
-
+	if (dl_cmd.status == 'lizard'){
+		window.open(dl_cmd.cmd)
+	}
+}
 
 
 
@@ -758,6 +775,11 @@ window.bootlegger.main_pool.vispath_clicker = async function(vp)
 
 
 
+
+
+
+
+
 // ==================================================
 // 					Restore protocol
 // ==================================================
@@ -802,17 +824,50 @@ window.bootlegger.main_pool.restore_protocol = function()
 
 
 
+
+
+
+
+
+
+
+
+
 // ==================================================
 // 					Cool webm previews
 // ==================================================
+
+// this is needed, because preventDefault is called whenever spacebar or arrows are pressed
+// this lets the system check whether the webm preview is actually active or not
+window.bootlegger.main_pool.viewing_webm = false
 window.bootlegger.main_pool.open_webm_preview = async function(elm)
 {
 	const flpath = elm.closest('flist-entry').getAttribute('flpath')
 
 	// indicate loading
 	$('body #webm_preview').remove()
-
-	// <img src="../assets/spinning_circle.svg">
+	$('body').append(`
+		<div id="webm_preview">
+			<div id="webm_vid_name">${elm.getAttribute('flname')}</div>
+			<div id="webm_video_player">
+				<img id="webm_video_loading_status" src="../assets/spinning_circle.svg">
+				<video class="core_hidden_opacity" ontimeupdate="window.bootlegger.main_pool.show_video_time(this)"></video>
+				<input value="50" min="0" max="100" type="range" id="volume_slider">
+			</div>
+			<div id="webm_timeline_stats">
+				<div id="timeline_timecode">00:00:00:00</div>
+				<div id="timeline_ctrl">
+					<div class="start_stop" id="tl_play">
+						<img draggable="false" src="../../assets/play_btn.svg">
+					</div>
+					<div class="start_stop" id="tl_stop">
+						<img draggable="false" src="../../assets/pause_btn.svg">
+					</div>
+				</div>
+			</div>
+			<div id="webm_video_waveform"></div>
+		</div>
+	`)
 
 	// load video and audio
 	const webm_vid =  await window.bootlegger.core.py_get(
@@ -832,40 +887,52 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 		},
 		'blob'
 	)
-
-
-	window.test_vid = webm_vid
-	window.test_vid_sound = webm_audio
-	$('body').append(`
-		<div id="webm_preview">
-			<div id="webm_video_player">
-				<video src="${webm_vid}"></video>
-			</div>
-			<div id="webm_video_waveform"></div>
-		</div>
-	`)
 	print('Done loading webm shite', webm_vid, webm_audio)
-
+	
+	// store the video selector somewhere	
 	const fuckoff = document.querySelector('#webm_video_player video')
-	fuckoff.currentTime = 60*(60*90)
+	fuckoff.src = webm_vid;
+	fuckoff.volume = 0.5;
+	window.bootlegger.main_pool.current_webm_vid = fuckoff;
+	// fuckoff, HOW CAN VIDEO LENGTH BE FUCKING INFINITY ??????
+	fuckoff.currentTime = 60*(60*900)
 	await fuckoff.play()
 
+	// create waveform object
 	window.bootlegger.main_pool.wave_ctrl = WaveSurfer.create({
 		container: '#webm_video_waveform',
-		waveColor: 'violet',
-		progressColor: 'purple',
+		// waveColor: '#267954',
+		waveColor: '#1D5D40',
+		progressColor: '#4BF2A7',
 		fillParent: true,
 		scrollParent: false,
 		responsive: true
 	});
-
-	window.bootlegger.main_pool.wave_ctrl.loadBlob(window.test_vid_sound);
+	window.bootlegger.main_pool.wave_ctrl.loadBlob(webm_audio);
 	
+	// audio is loaded lastly, which means that it's a concluding step
 	window.bootlegger.main_pool.wave_ctrl.on('ready', function () {
+		// at this point everything is loaded
+		// now it has to be set up
+
+		// the audio is not actually coming from the waveform...
+		// therefore it has to be silent
 		window.bootlegger.main_pool.wave_ctrl.setVolume(0);
+		// scroll webm video to the start
 		fuckoff.currentTime = 0;
+
+		// unveal everything in the gui
+		$('#webm_preview img#webm_video_loading_status').remove()
+		fuckoff.classList.remove('core_hidden_opacity')
+
+		// start playing video and waveform
 		window.bootlegger.main_pool.wave_ctrl.play();
-		fuckoff.play()
+		fuckoff.play();
+
+		// indicate that viewing is active
+		// important todo: it has to be possible to cancel the loading
+		// this is here so that nobody can fuckup the sync due to audio/video loading slower
+		window.bootlegger.main_pool.viewing_webm = true
 	});
 }
 
@@ -893,3 +960,231 @@ window.bootlegger.main_pool.nav_webm_audio = function(evt, elm)
 	})
 	vid.currentTime = scroll
 }
+
+
+// running timecode
+// stolen from stack overflow
+// GOD SAVE THE Q- STACK OVERFLOW
+
+/*
+let totalSeconds = 28565;
+let hours = Math.floor(totalSeconds / 3600);
+totalSeconds %= 3600;
+let minutes = Math.floor(totalSeconds / 60);
+let seconds = totalSeconds % 60;
+
+console.log("hours: " + hours);
+console.log("minutes: " + minutes);
+console.log("seconds: " + seconds);
+
+// If you want strings with leading zeroes:
+minutes = String(minutes).padStart(2, "0");
+hours = String(hours).padStart(2, "0");
+seconds = String(seconds).padStart(2, "0");
+console.log(hours + ":" + minutes + ":" + seconds);
+*/
+
+window.bootlegger.main_pool.show_video_time = function(vid)
+{
+	const mkmsec = vid.currentTime
+
+	let totalSeconds = vid.currentTime;
+	let hours = Math.floor(totalSeconds / 3600);
+	totalSeconds %= 3600;
+	let minutes = Math.floor(totalSeconds / 60);
+	let seconds = totalSeconds % 60;
+
+	const msec = str(mkmsec.toFixed(2)).split('.').at(-1).zfill(2)
+
+	const tcode = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(parseInt(seconds)).padStart(2, '0')}:${String(msec).padStart(2, '0')}`
+
+	document.querySelector('#webm_preview #timeline_timecode').innerText = tcode
+}
+
+window.bootlegger.main_pool.pause_webm = function()
+{
+	window.bootlegger.main_pool.wave_ctrl.pause()
+	window.bootlegger.main_pool.current_webm_vid.pause()
+}
+
+window.bootlegger.main_pool.play_webm = function()
+{
+	window.bootlegger.main_pool.wave_ctrl.play()
+	window.bootlegger.main_pool.current_webm_vid.play()
+}
+
+window.bootlegger.main_pool.toggle_webm_play = function(evt)
+{
+	if (!(evt.keyCode == 32) || window.bootlegger.main_pool.viewing_webm != true){return}
+
+	evt.preventDefault()
+
+	if (window.bootlegger.main_pool.current_webm_vid.paused){
+		window.bootlegger.main_pool.wave_ctrl.play()
+		window.bootlegger.main_pool.current_webm_vid.play()
+	}else{
+		window.bootlegger.main_pool.wave_ctrl.pause()
+		window.bootlegger.main_pool.current_webm_vid.pause()
+	}
+}
+
+window.bootlegger.main_pool.webm_skip_lr = async function(evt)
+{
+	// don't do shit if those aren't the LR buttons
+	if (!(evt.keyCode == 37) && !(evt.keyCode == 39) || window.bootlegger.main_pool.viewing_webm != true){return}
+	evt.preventDefault()
+
+	// how many seconds to skip
+	var skip_sec = 5.0
+
+	// in which way to skip
+	const skip_offs = (evt.keyCode == 37) ? (skip_sec * -1) : skip_sec
+
+	// FUCK JS
+	const real_time = Math.max(window.bootlegger.main_pool.current_webm_vid.currentTime + skip_offs, 0)
+	// basically, fuck js v2
+	const wsf_loop = ((window.bootlegger.main_pool.wave_ctrl.getCurrentTime() == window.bootlegger.main_pool.wave_ctrl.getDuration()) && skip_offs != (skip_sec * -1)) ? 0 : real_time
+
+	// pause all
+	await window.bootlegger.main_pool.wave_ctrl.pause()
+	await window.bootlegger.main_pool.current_webm_vid.pause()
+
+	// skip
+	// await window.bootlegger.main_pool.wave_ctrl.skip(skip_offs)
+	window.bootlegger.main_pool.current_webm_vid.currentTime = real_time
+
+	print('Honestly fuckoff with this...', window.bootlegger.main_pool.current_webm_vid.currentTime, window.bootlegger.main_pool.wave_ctrl.getCurrentTime())
+	// unpause
+	window.bootlegger.main_pool.wave_ctrl.play(wsf_loop)
+	window.bootlegger.main_pool.current_webm_vid.play()
+	
+}
+
+window.bootlegger.main_pool.close_webm_preview = function(evt)
+{
+	// only trigger this if the preview is actually active
+	if (!(evt.keyCode == 27) || window.bootlegger.main_pool.viewing_webm != true){return}
+
+	// indicate that the webm preview is no longer active
+	window.bootlegger.main_pool.viewing_webm = false;
+	// delete webm video from cache
+	obj_url.revokeObjectURL(window.bootlegger.main_pool.current_webm_vid.src)
+	// kill waveform
+	window.bootlegger.main_pool.wave_ctrl.destroy()
+	// kill overlay
+	$('#webm_preview').remove()
+}
+
+window.bootlegger.main_pool.mwheel_adjust_volume = function(evt)
+{
+	if (window.bootlegger.main_pool.viewing_webm != true){return}
+
+	evt.preventDefault()
+	evt.stopPropagation()
+
+	const sld = document.querySelector('#volume_slider')
+
+	if (evt.deltaY < 0){
+		sld.valueAsNumber += 5;
+	}else{
+		sld.valueAsNumber -= 5;
+	}
+
+	window.bootlegger.main_pool.current_webm_vid.volume = sld.valueAsNumber / 100
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// todo: move it to event binds
+// document.addEventListener('mousemove', tr_event => {
+// 	if (window.bootlegger.main_pool.drag_handle){
+// 		window.bootlegger.main_pool.handle_move(tr_event)
+// 	}
+// });
+
+
+window.bootlegger.main_pool.handle_unbind = function()
+{
+	window.bootlegger.main_pool.drag_handle = null;
+}
+
+window.bootlegger.main_pool.handle_stick = function(tr_event, schandle)
+{
+	window.bootlegger.main_pool.handle_set_from_slider(schandle, tr_event);
+	window.bootlegger.main_pool.drag_handle = schandle.closest('#sc_body').querySelector('#sc_handle');
+}
+
+window.bootlegger.main_pool.handle_move = function(evt)
+{
+	if (!window.bootlegger.main_pool.drag_handle){return}
+	const sc_root = window.bootlegger.main_pool.drag_handle.closest('#sc_body');
+	const handle = window.bootlegger.main_pool.drag_handle;
+	const sc_root_dims = getComputedStyle(sc_root);
+	const sc_root_rect = sc_root.getBoundingClientRect();
+	
+	const offs = evt.clientY - sc_root_rect.top;
+	// and so a wise man has spoken: thy function calls are expensive
+	const clamped = Math.min(Math.max(offs, 35), sc_root_rect.height - 35)
+	console.log(clamped)
+	window.bootlegger.main_pool.drag_handle.style.top = clamped.toString() + 'px'
+}
+
+window.bootlegger.main_pool.handle_set_from_slider = function(sld, evt)
+{
+	const sl_root = sld.closest('#sc_body')
+	const handle = sl_root.querySelector('#sc_handle');
+
+	const sc_root_dims = getComputedStyle(sl_root);
+	const sc_root_rect = sl_root.getBoundingClientRect();
+	
+	const offs = evt.clientY - sc_root_rect.top;
+	// and so a wise man has spoken: thy function calls are expensive
+	const clamped = Math.min(Math.max(offs, 35), sc_root_rect.height - 35)
+	handle.style.top = clamped.toString() + 'px'
+}
+
+window.bootlegger.main_pool.handle_set_abs = function(slider, perc=0)
+{
+	const sl_root = slider.closest('#sc_body')
+	const handle = sl_root.querySelector('#sc_handle');
+
+	const sc_root_dims = getComputedStyle(sl_root);
+	const sc_root_rect = sl_root.getBoundingClientRect();
+	
+	const offs = sc_root_rect.height * perc;
+	// and so a wise man has spoken: thy function calls are expensive
+	const clamped = Math.min(Math.max(offs, 35), sc_root_rect.height - 35)
+	handle.style.top = clamped.toString() + 'px'
+}
+
+
+/*
+
+	"mousedown": [
+		{
+			"selector": "#webm_preview #sc_handle, #sc_body",
+			"function": "console.log",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
+		}
+	],
+	"mouseup": [
+		{
+			"selector": "body",
+			"function": "window.bootlegger.main_pool.vidscroll",
+			"pass_event": true,
+			"pass_element": true,
+			"pass_params": ""
+		}
+	],*/
