@@ -864,6 +864,14 @@ $this.open_webm_preview = async function(elm)
 			<div id="webm_video_waveform"></div>
 		</div>
 	`)
+	// store the video selector somewhere	
+	const fuckoff = document.querySelector('#webm_video_player video')
+	$this.current_webm_vid = fuckoff;
+
+	// indicate that viewing is active
+	// important todo: it has to be possible to cancel the loading
+	// it's also important to note that this may or may not affect scrolling n shit
+	$this.viewing_webm = true
 
 	// load video and audio
 	const webm_vid =  await $all.core.py_get(
@@ -885,11 +893,11 @@ $this.open_webm_preview = async function(elm)
 	)
 	print('Done loading webm shite', webm_vid, webm_audio)
 	
-	// store the video selector somewhere	
-	const fuckoff = document.querySelector('#webm_video_player video')
+	
+	// video default settings
 	fuckoff.src = webm_vid;
 	fuckoff.volume = 0.5;
-	$this.current_webm_vid = fuckoff;
+	
 	// fuckoff, HOW CAN VIDEO LENGTH BE FUCKING INFINITY ??????
 	fuckoff.currentTime = 60*(60*900)
 	await fuckoff.play()
@@ -924,11 +932,6 @@ $this.open_webm_preview = async function(elm)
 		// start playing video and waveform
 		$this.wave_ctrl.play();
 		fuckoff.play();
-
-		// indicate that viewing is active
-		// important todo: it has to be possible to cancel the loading
-		// this is here so that nobody can fuckup the sync due to audio/video loading slower
-		$this.viewing_webm = true
 	});
 }
 
