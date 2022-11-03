@@ -238,9 +238,12 @@ $this.spawn_video_unit = async function(vpath)
 		// for now the existing entry is replaced with a new one
 		$(`mpool flist flist-entry[flname="${fname}"]`).remove()
 		$('mpool flist').append(video_entry)
+		// store the etype element of the entry for later reuse
+		const etype = video_entry.find('etype')[0]
 
+		// try pulling stuff from cache
 		var video_preview = $this.preview_cache_pull(vpath)
-
+		// if it does not exist in the registry - get the preview from the server
 		if (!video_preview){
 			var video_preview = await $all.core.py_get(
 				'poolsys/poolsys',
@@ -250,21 +253,38 @@ $this.spawn_video_unit = async function(vpath)
 				},
 				'buffer'
 			)
+			// cache the result
 			$this.preview_cache_add(vpath, video_preview)
 		}
 
-		
+		// load gigabin with frames
+		// important todo: There has to be a better way of determining whether the preview exists or not
+		// for now the server would simply pass some sort of a fake/empty gigabin
+		// with only index json which says that the preview is still generating
+		// (remember that there's a lock file... journal record... remember?)
 		const preview_bin = new window.gigabin(video_preview)
+		// one of the stored files in the gigabin is a json telling how many frames there are
 		const giga_info = preview_bin.read_file('index', 'json')
+		// if it's not marked as existing - indicate that it's still generating and don't do antying else
+		if (giga_info['exists'] == true){
+			etype.style.backgroundImage = `url('../assets/vid_icon.svg') url('../assets/spinning_circle.svg')`;
+			resolve(true)
+		}
 		const pframe_count = giga_info['preview_frame_count']
 		$(`flist-entry[flpath="${vpath}"]`).attr('framecount', pframe_count)
+		// every preview is an array of frames
+		// these arrays are connected with corresponding html elements via randomly generated IDs
 		$this.video_bins[unit_id] = []
+		// populate the array with images
+		// important todo: just check the array length
 		for (var frame of range(pframe_count)){
-			const imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
+			var imgu = preview_bin.read_file(`frn${frame+1}`, 'obj_url')
 			$this.video_bins[unit_id].push(imgu)
 			$this.vidframes_cache.push(await $this.await_img_load(imgu))
 		}
-		video_entry.find('etype')[0].style.backgroundImage = `url(${$this.video_bins[unit_id][0]})`
+		// set to the middle of the frames
+		etype.style.backgroundImage = `url(${$this.video_bins[unit_id][int(pframe_count / 2)]})`
+		video_entry.addClass('frames_processed')
 		resolve(true)
 
 	});
@@ -294,13 +314,15 @@ $this.vidscroll = function(evt, etgt)
 	const rect = etgt.getBoundingClientRect()
 
 	// get frame count
-	const prf = flist_entry.getAttribute('framecount')
+	// const prf = flist_entry.getAttribute('framecount')
+	// get frame array entry
+	const fr_array = $this.video_bins[pr_id]
 
 	// Mouse position relative to element
 	const current_x = Math.abs(evt.clientX - rect.left);
 	// current / total = current percent progress
-	const scroll = int(prf * (current_x / rect.width))
-	etgt.style.backgroundImage = `url(${$this.video_bins[pr_id][scroll]})`
+	const scroll = int(fr_array.length * (current_x / rect.width))
+	etgt.style.backgroundImage = `url(${fr_array[scroll]})`
 }
 
 
@@ -494,7 +516,7 @@ $this.list_media = async function(elm='')
 
 
 // ==================================================
-// 			DOwnload video RMB. Todo: move to ft.js ?
+// 		Download video RMB. Todo: move to ft.js ?
 // ==================================================
 $this.video_dl = async function(evt, elem)
 {
@@ -873,6 +895,46 @@ $this.open_webm_preview = async function(elm)
 	// it's also important to note that this may or may not affect scrolling n shit
 	$this.viewing_webm = true
 
+
+	//
+	// AH YES, SOME VIDOES MAY NOT HAVE A PREVIEW BECAUSE THEY WERENT UPLOADED THOURGH THE SYSTEM
+	//
+
+	// for now solve this by making an extra request
+	const webm_state =  await $all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'check_webm_status',
+			'vidpath': flpath
+		},
+		'json'
+	)
+	// if everything is ready then just go ahead
+	if (webm_state.full != true){
+		$('#webm_video_player img#webm_video_loading_status').remove()
+		if (webm_state.generating == true){
+			$(fuckoff).replaceWith(`
+				<div id="webm_still_generating">
+					Preview is still generating... Big files take hours to generate...
+					<btn onclick="$('#webm_preview').remove()">Okay :(</btn>
+				</div>
+			`)
+		}
+		if (webm_state.missing == true){
+			$this.viewing_webm = false
+			$(fuckoff).replaceWith(`
+				<div id="webm_missing">
+					<div id="webm_missing_title">Preview is missing. Please click the button below (this is your only option, escape is locked now)</div>
+					<btn onclick="$this.gen_webm_manually('${flpath}')" id="manual_webm_gen">Start Generating Webm</btn>
+				</div>
+			`)
+		}
+		return
+	}
+
+
+
+
 	// load video and audio
 	const webm_vid =  await $all.core.py_get(
 		'poolsys/poolsys',
@@ -935,6 +997,19 @@ $this.open_webm_preview = async function(elm)
 	});
 }
 
+
+$this.gen_webm_manually = function(fp)
+{
+	$all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'generate_webm_preview',
+			'vidpath': fp
+		},
+		'text'
+	)
+	$('#webm_preview').remove()
+}
 
 
 // navigation

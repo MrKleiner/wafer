@@ -162,7 +162,7 @@
 	],
 	"mousemove": [
 		{
-			"selector": "flist-entry etype[vid]",
+			"selector": "flist-entry.frames_processed etype[vid]",
 			"function": "$this.vidscroll",
 			"pass_event": true,
 			"pass_element": true,

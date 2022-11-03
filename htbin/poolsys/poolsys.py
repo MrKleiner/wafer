@@ -247,6 +247,9 @@ class poolsys:
 		# the less rubbish there is the better
 		fj = server.journal()
 
+		# important todo: is it really a good place to evaluate the entire journal ?
+		fj.process_jr()
+
 		# preview db location
 		prdb = server.preview_db
 		# target video location
@@ -254,6 +257,7 @@ class poolsys:
 		tgt_vid = Path(vidpath)
 		if not tgt_vid.is_file():
 			raise Exception('generate_vid_preview: video does not exist under the specified file path')
+
 		# todo: also evaluate file checksum ?
 		# preview_name = server.util.eval_hash(str(tgt_vid), 'sha256')
 		# the hash of the video is also its preview name, for now
@@ -264,6 +268,33 @@ class poolsys:
 		# aka 1hr video = 200 frames, 10 minute video = 50 frames ...
 
 
+		# todo: so what about locking the preview generation ?
+		# for now generate a lock file and don't generate shit if it exists
+		# obviously, add it to journal so that it cannot be fucked forever
+		# right now the problem is that a new gigabin is generated each time
+		# this is quite expensive
+		# the gigabin lib should either support generating virtual files
+		# or just some other solution...
+		lockpath = (server.tmp_dir / f'{preview_file_name}.goaway')
+		if lockpath.is_file():
+			stilgen = gigabin(lockpath.with_suffix('systmp'), True)
+			# fj.reg_file(lockpath.with_suffix('systmp'), 1)
+			fake_json = {
+				'exists': False
+			}
+			# add this json to gigabin
+			stilgen.add_solid(
+				fname 		= 'index',
+				data 		= json.dumps(fake_json).encode(),
+				overwrite 	= True,
+				dohash 		= False
+			)
+			tmpbuf = lockpath.with_suffix('systmp').read_bytes()
+			lockpath.with_suffix('systmp').unlink(missing_ok=True)
+			server.flush(tmpbuf)
+
+		lockpath.write_bytes('no really, fuckoff'.encode())
+		fj.reg_file(lockpath)
 
 
 		# ==========================================================
@@ -311,7 +342,11 @@ class poolsys:
 			# ffmpeg executable
 			'/usr/bin/ffmpeg',
 
+			# automatically overwrite if file exists already
 			'-y',
+
+			# limit CPU thread usage
+			'-threads', '2',
 			
 			# input file
 			'-i', str(tgt_vid),
@@ -379,6 +414,8 @@ class poolsys:
 			'frame_count_total': vid_fr_count,
 			#
 			'preview_frame_count': frc,
+			# tell client that it exists
+			'exists': True,
 			# test
 			'lizards': 'sexy'
 			# 'debug': str(prdb / 'temp_shite' / f'{preview_file_name}{1}.webp')
@@ -396,6 +433,10 @@ class poolsys:
 		# return (prdb / 'temp_shite' / f'{preview_name}.chad').read_bytes()
 		# server.x_files((prdb / 'temp_shite' / f'{preview_file_name}.chad'), 'video_preview')
 
+		# important todo: this is where the shit is unlocked
+		lockpath.unlink()
+		fj.unreg_file(lockpath)
+
 		# return path to the .chad file
 		return chad_location
 
@@ -410,10 +451,17 @@ class poolsys:
 		import subprocess as sp
 		import os
 
+		# just in case - register shit in file journal
+		fj = server.journal()
+
 		# get path to the video
 		vid_path = server.sys_root / server.prms.get('vidpath')
 		# output dir is the lzpreviews folder
 		preview_path = vid_path.parent / 'prdb_lzpreviews' / f'{vid_path.name}.fullvidp.lzpreview.webm'
+
+		# todo: this is where the shit is registered for deletion
+		fj.reg_file(f'{preview_path}.fuckoff.webm', 9)
+		fj.reg_file(preview_path.with_suffix('.aac'), 4)
 
 		# create ffmpeg params
 		ffmpeg_prms = [
@@ -422,6 +470,9 @@ class poolsys:
 
 			# automatically discard if file exists
 			'-n',
+
+			# limit CPU thread usage
+			'-threads', '2',
 
 			# input file
 			'-i', str(vid_path),
@@ -481,6 +532,11 @@ class poolsys:
 
 		# rename stuff once done encoding
 		os.rename(str(f'{preview_path}.fuckoff.webm'), str(preview_path))
+		
+		# todo: this is where shit is unregistered
+		fj.unreg_file(f'{preview_path}.fuckoff.webm')
+		fj.unreg_file(preview_path.with_suffix('.aac'))
+
 		# flush the shit ?
 		# lmao no. this will kill he python process...
 		# server.flush('ok'.encode())
@@ -497,10 +553,29 @@ class poolsys:
 		tgt_path = server.sys_root / server.prms.get('vidpath')
 		server.x_files((tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.aac'), 'audio.aac')
 
+	# check whether wbm preview is still generating, fully generated alr or missing completely
+	def check_webm_status(self):
+		tgt_path = server.sys_root / server.prms.get('vidpath')
+		full_vid = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.webm').is_file()
+		still_gen = (tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.fullvidp.lzpreview.webm.fuckoff.webm').is_file()
+		
+		server.bin_jwrite({
+			'full': full_vid,
+			'generating': still_gen,
+			'missing': not full_vid and not still_gen
+		})
+		server.flush()
+
+
+
+
+
+
+
 
 	# todo: temp. donwload a video
 	def dl_vid(self):
-		tgt_p = server.sys_root / server.prms['target']
+		tgt_p = server.sys_root / server.prms['dl_tgt']
 		server.x_files(tgt_p, tgt_p.name)
 
 	# todo: temp. donwload a video
@@ -540,6 +615,7 @@ actions = md_actions(
 		'generate_webm_preview':	pool_sys.generate_webm_preview,
 		'get_webm':					pool_sys.get_webm,
 		'get_webm_audio':			pool_sys.get_webm_audio,
+		'check_webm_status':		pool_sys.check_webm_status,
 		# todo: temp here: download a video
 		'get_dl_vid':				pool_sys.get_dl_vid,
 		'dl_vid':					pool_sys.dl_vid,
