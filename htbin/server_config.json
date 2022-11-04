@@ -9,5 +9,10 @@
 	"system_root": "/raid/basketftp",
 
 	// ffmpeg stuff (required)
-	"ffmpeg": ""
+
+	// ffmpeg executable location
+	"ffmpeg": "",
+
+	// ffprobe executable location
+	"ffprobe": ""
 }

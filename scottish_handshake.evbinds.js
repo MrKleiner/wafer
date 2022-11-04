@@ -24,7 +24,7 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('admin btn#spawn_new_user')){window.bootlegger.admin.add_user_profile()}
 	if (event.target.closest('admin .usr_profile .userlist_kill_user')){window.bootlegger.admin.userlist_kill_user(event.target.closest('admin .usr_profile .userlist_kill_user'))}
 	if (event.target.closest('admin .alw_list_folders .alw_kill_folder')){window.bootlegger.admin.alw_kill_folder(event.target.closest('admin .alw_list_folders .alw_kill_folder'))}
-	if (event.target.closest('admin .alw_list_folders .alw_kill_admin')){window.bootlegger.admin.alw_kill_admin(event.target.closest('admin .alw_list_folders .alw_kill_admin'))}
+	if (event.target.closest('admin .alw_allowance_pool .alw_kill_admin')){window.bootlegger.admin.alw_kill_admin(event.target.closest('admin .alw_allowance_pool .alw_kill_admin'))}
 	if (event.target.closest('admin .alw_add_folder')){window.bootlegger.admin.add_allowed_folder(event.target.closest('admin .alw_add_folder'))}
 	if (event.target.closest('admin .alw_add_admin')){window.bootlegger.admin.add_admin_allowance(event.target.closest('admin .alw_add_admin'))}
 	if (event.target.closest('admin #save_access_list')){window.bootlegger.admin.save_allowance_list()}

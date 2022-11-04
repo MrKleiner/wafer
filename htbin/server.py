@@ -11,6 +11,8 @@ class fjournal:
 
 	# takes the path to the file and the life length
 	# life in hours
+	# overwrites previous record, if any
+	# important todo: choose whether to overwrite or no
 	def reg_file(self, flpath, life=5):
 		import json
 		from datetime import datetime, timedelta
@@ -46,15 +48,18 @@ class fjournal:
 		from pathlib import Path
 		for jf in self.jdb.glob('*.jr'):
 			try:
+				# read file contents
 				jdata = jf.read_text().split('\n')
+				# delete object task immediately
+				# todo: does it actually makes sense to delete it immediately ?
+				jf.unlink(missing_ok=True)
+
 				# if the date is older than now - delete
 				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
 				now_date = datetime.now()
 				# delete target file
 				if fl_date < now_date:
 					Path(jdata[1]).unlink(missing_ok=True)
-				# delete object task
-				jf.unlink(missing_ok=True)
 			except Exception as e:
 				continue
 
@@ -127,9 +132,17 @@ class server:
 		# self.user_token = self.auth_db.get(url_params.get('auth'))
 		self.util = util
 
+		#
+		# Ensure that all the system folders exist
+		#
+
+		# important todo: is it bad to do this on each request ?
+		(self.preview_db / 'temp_shite').mkdir(exist_ok=True)
+		(self.preview_db / 'journal').mkdir(exist_ok=True)
+		(self.preview_db / 'preview_queue').mkdir(exist_ok=True)
 
 		#
-		# applicable formats
+		# applicable file formats
 		#
 
 		self.allowed_vid = [

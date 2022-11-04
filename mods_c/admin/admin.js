@@ -291,8 +291,9 @@ window.bootlegger.admin.save_allowance_list = async function(usr)
 	}
 
 	const save_response = await window.bootlegger.core.py_send(
+		'admin/admin',
 		{
-			'action': 'save_allowance_list'
+			'action': 'save_access_list'
 		},
 		JSON.stringify(acl),
 		'text'

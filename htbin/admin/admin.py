@@ -121,8 +121,7 @@ class user_ctrl:
 
 
 
-	# Load access definition list
-	# Again, no tokens on purpose
+	# Save access definition list
 	def save_access_list(self):
 		from pathlib import Path
 		import json
@@ -142,8 +141,7 @@ class user_ctrl:
 
 		cl_db_path.write_bytes(json.dumps(clearance_db).encode())
 
-		server.bin_write('Saved allowance pool')
-		server.flush()
+		server.flush('Saved allowance pool'.encode())
 
 
 

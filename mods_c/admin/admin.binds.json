@@ -45,7 +45,7 @@
 			"pass_params": ""
 		},
 		{
-			"selector": "admin .alw_list_folders .alw_kill_admin",
+			"selector": "admin .alw_allowance_pool .alw_kill_admin",
 			"function": "window.bootlegger.admin.alw_kill_admin",
 			"pass_event": false,
 			"pass_element": true,

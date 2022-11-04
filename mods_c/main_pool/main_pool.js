@@ -270,9 +270,25 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 		// one of the stored files in the gigabin is a json telling how many frames there are
 		const giga_info = preview_bin.read_file('index', 'json')
 		// if it's not marked as existing - indicate that it's still generating and don't do antying else
-		if (giga_info['exists'] == true){
-			etype.style.backgroundImage = `url('../assets/vid_icon.svg') url('../assets/spinning_circle.svg')`;
+		if (giga_info['exists'] != true){
+			// etype.style.backgroundImage = `url('../assets/spinning_circle.svg'), url('../assets/vid_icon.svg')`;
+			etype.style.backgroundImage = null;
+			etype.classList.add('preview_frames_still_processing')
+			print('giga bin does not exist')
+			
+			// important: resume the queue
+			// normally the client should not be allowed to do this
+			// but it doesnt matter really
+			window.bootlegger.core.py_get(
+				'poolsys/poolsys',
+				{
+					'action': 'resume_q'
+				},
+				'text'
+			)
+
 			resolve(true)
+			return
 		}
 		const pframe_count = giga_info['preview_frame_count']
 		$(`flist-entry[flpath="${vpath}"]`).attr('framecount', pframe_count)
@@ -914,6 +930,7 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 		'json'
 	)
 	// if everything is ready then just go ahead
+	// important todo: the original system is obsolete now. There is duplicate code down below
 	if (webm_state.full != true){
 		$('#webm_video_player img#webm_video_loading_status').remove()
 		if (webm_state.generating == true){
@@ -926,10 +943,16 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 		}
 		if (webm_state.missing == true){
 			window.bootlegger.main_pool.viewing_webm = false
+			// $(fuckoff).replaceWith(`
+			// 	<div id="webm_missing">
+			// 		<div id="webm_missing_title">Preview is missing. Please click the button below (this is your only option, escape is locked now)</div>
+			// 		<btn onclick="window.bootlegger.main_pool.gen_webm_manually('${flpath}')" id="manual_webm_gen">Start Generating Webm</btn>
+			// 	</div>
+			// `)
 			$(fuckoff).replaceWith(`
-				<div id="webm_missing">
-					<div id="webm_missing_title">Preview is missing. Please click the button below (this is your only option, escape is locked now)</div>
-					<btn onclick="window.bootlegger.main_pool.gen_webm_manually('${flpath}')" id="manual_webm_gen">Start Generating Webm</btn>
+				<div id="webm_still_generating">
+					Preview is still generating... Big files take hours to generate :-(
+					<btn onclick="$('#webm_preview').remove()">Okay :(</btn>
 				</div>
 			`)
 		}
@@ -957,9 +980,9 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 		},
 		'blob'
 	)
-	print('Done loading webm shite', webm_vid, webm_audio)
-	
-	
+	print('Done loading webm shite', webm_vid, webm_audio, await webm_audio.text())
+
+
 	// video default settings
 	fuckoff.src = webm_vid;
 	fuckoff.volume = 0.5;

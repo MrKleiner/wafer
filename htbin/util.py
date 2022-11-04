@@ -100,6 +100,6 @@ def giga_json(inp, bt=False):
 def generate_token(do_long=False):
 	from random import random
 	if do_long == True:
-		return eval_hash('!lizard?'.join([str(random()) for rnd in range(64)]), 'sha512')
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(128)]), 'sha512')
 	else:
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(64)]), 'sha256')
