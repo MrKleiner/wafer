@@ -533,6 +533,8 @@ class mqueue:
 		# and uregister it from the journal
 		fj.unreg_file(q_lock_file)
 
+		server.flush('kill linux'.encode())
+
 	# add an item to the registry
 	# takes the path of the target video
 	# and the task type

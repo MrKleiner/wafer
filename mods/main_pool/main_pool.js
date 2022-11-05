@@ -885,7 +885,7 @@ $this.open_webm_preview = async function(elm)
 			<div id="webm_vid_name">${elm.getAttribute('flname')}</div>
 			<div id="webm_video_player">
 				<img id="webm_video_loading_status" src="../assets/spinning_circle.svg">
-				<video class="core_hidden_opacity" ontimeupdate="$this.show_video_time(this)"></video>
+				<video disablepictureinpicture="true" disablePictureInPicture="true" class="core_hidden_opacity" ontimeupdate="$this.show_video_time(this)"></video>
 				<input value="50" min="0" max="100" type="range" id="volume_slider">
 			</div>
 			<div id="webm_timeline_stats">

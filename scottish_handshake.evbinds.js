@@ -12,6 +12,7 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('#app_topbar #nav_display_help, #help_overlay')){window.bootlegger.core.display_help()}
 	if (event.target.closest('lzdropdown .lz_menu_entries [dropdown_set]')){lzdrops.set_active(event.target.closest('lzdropdown .lz_menu_entries [dropdown_set]'))}
 	if (event.target.closest('[haslizdropdown], lzdropdown')){lzdrops.showhide(event.target.closest('[haslizdropdown], lzdropdown'))}else{lzdrops.showhide(event.target.closest('[haslizdropdown], lzdropdown'))}
+	if (event.target.closest('body')){window.bootlegger.core.browser_detection_smart(tr_event)}
 
 
 

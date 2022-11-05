@@ -49,6 +49,16 @@
 			"pass_element": true,
 			"pass_params": "",
 			"else": "lzdrops.showhide"
+		},
+
+
+
+		{
+			"selector": "body",
+			"function": "$all.core.browser_detection_smart",
+			"pass_event": true,
+			"pass_element": false,
+			"pass_params": ""
 		}
 	]
 }

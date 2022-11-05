@@ -355,6 +355,100 @@ $this.browser_detection = function()
 }
 
 
+// important todo: don't do this on every click...
+$this.browser_detection_smart = function(evt)
+{
+	if (window.session_gotcha){return}
+
+	var winner = window.localStorage.getItem('browser_detected')
+	if (!winner){
+		const compat_table = {
+			'chrome': {
+				'yes': [
+					window.isSecureContext ? !!window.FileSystemHandle : true,
+					!!window.ImageCapture,
+					window.isSecureContext ? !!window.navigator.locks.request : true,
+					window.isSecureContext ? !!window.showOpenFilePicker : true,
+					!!window.navigator.share,
+					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+					!!window.URL,
+					('outputLatency' in (new window.AudioContext)),
+					('backdropFilter' in document.body.style)
+				],
+				'no': [
+					!window.AudioContext.prototype.createMediaStreamTrackSource
+				]
+			},
+			'firefox': {
+				'yes': [
+					!!window.AudioContext.prototype.createMediaStreamTrackSource,
+					window.isSecureContext ? !!window.navigator.locks.request : true,
+					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+					!!window.URL,
+					('outputLatency' in (new window.AudioContext))
+				],
+				'no': [
+					!window.FileSystemHandle,
+					!window.ImageCapture,
+					!window.navigator.share,
+					!('backdropFilter' in document.body.style)
+				]
+			},
+			'safari': {
+				'yes': [
+					!!window.FileSystemHandle,
+					window.isSecureContext ? !!window.navigator.locks.request : true,
+					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+					!!window.navigator.share,
+					('backdropFilter' in document.body.style)
+				],
+				'no': [
+					(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.queryPermission : false,
+					(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.requestPermission : false,
+					!window.ImageCapture,
+					!window.AudioContext.prototype.createMediaStreamTrackSource,
+					!('outputLatency' in (new window.AudioContext)),
+
+				]
+			}
+		}
+
+		console.log(compat_table)
+		var candidates = {}
+		for (var browser in compat_table){
+			// count the least amount of false
+			var score_yes = compat_table[browser].yes.filter(number => number != true)
+			var score_no = compat_table[browser].no.filter(number => number != true)
+			candidates[score_yes.length + score_no.length] = browser
+		}
+		print('Browser candidates:', candidates)
+		// final decision
+		var winner = candidates[Math.min(...Object.keys(candidates))]
+
+		// don't do this again
+		window.localStorage.setItem('browser_detected', winner)
+	}
+
+	if (winner == 'firefox'){
+		document.body.setAttribute('shitfox', true)
+	}
+	if (winner == 'safari'){
+		$('body').html(`
+			<div style="display: flex; font-size: 3.1vw; flex-direction: column; width: 100%; height: 100%; align-items: center; justify-content: center">
+				<h1 style="color: red">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!</h1>
+				<img style="width: 100%; height: 50%; object-fit: contain; object-position: center;" src="../assets/safari_shit.webp">
+			</div>
+		`);
+	}
+
+	window.session_gotcha = true;
+}
+
+
+
+
+
+
 $(document).ready(function(){
 	$this.browser_detection()
 	$all.main_pool.module_loader();
