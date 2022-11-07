@@ -179,6 +179,7 @@ class struct_ctrl:
 		(tgt_match / 'photo').mkdir()
 		(tgt_match / 'moments').mkdir()
 		(tgt_match / 'pressa').mkdir()
+		(tgt_match / 'photosession').mkdir()
 
 		server.bin_write(json.dumps({'status': 'all_good'}).encode())
 		server.flush()

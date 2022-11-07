@@ -14,15 +14,22 @@ window.bootlegger.main_pool.dirlisting = []
 
 
 // switch between grid and list layouts
-window.bootlegger.main_pool.set_flist_view_type = function(tp='list')
+window.bootlegger.main_pool.set_flist_view_type = function(tp='list', shadow=false)
 {
+	shadow ? null : window.localStorage.setItem('flist_view_type', tp)
+
+	const mpool = document.querySelector('mpool')
 	if (tp == 'list'){
-		document.querySelector('mpool').removeAttribute('grid');
-		document.querySelector('mpool').setAttribute('list', true);
+		mpool.removeAttribute('grid');
+		mpool.setAttribute('list', true);
+		$('#list_grid_switch *').removeClass('list_grid_switch_active', true);
+		$('#list_grid_switch #show_as_list').addClass('list_grid_switch_active', true);
 	}
 	if (tp == 'grid'){
-		document.querySelector('mpool').removeAttribute('list');
-		document.querySelector('mpool').setAttribute('grid', true);
+		mpool.removeAttribute('list');
+		mpool.setAttribute('grid', true);
+		$('#list_grid_switch *').removeClass('list_grid_switch_active', true);
+		$('#list_grid_switch #show_as_grid').addClass('list_grid_switch_active', true);
 	}
 }
 
@@ -31,6 +38,7 @@ window.bootlegger.main_pool.module_loader = async function()
 {
 	print('start loading mpool')
 	await window.bootlegger.core.sysloader('main_pool', true);
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type') || 'list')
 	window.bootlegger.main_pool.restore_protocol()
 	await window.bootlegger.main_pool.load_root_dir(false)
 	await window.bootlegger.main_pool.go_dir_path()
@@ -78,6 +86,7 @@ window.bootlegger.main_pool.await_img_load = function(imgsrc)
 // load the root directory of the entire FTP
 window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 {
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool load root dir')
 	window.bootlegger.main_pool.media_units_iteration.kill()
 	// list root shite
@@ -95,7 +104,7 @@ window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 	// window.bootlegger.main_pool.update_vis_path()
 
 	$('mpool flist').empty();
-	window.bootlegger.main_pool.set_flist_view_type('list');
+	// window.bootlegger.main_pool.set_flist_view_type('list');
 	// spawn shite
 	for (var entry of roots){
 		$('mpool flist').append(`
@@ -111,6 +120,7 @@ window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 // list subroot directories
 window.bootlegger.main_pool.list_league_matches = async function(elm='')
 {
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	window.bootlegger.main_pool.media_units_iteration.kill()
 	print('mpool list matches')
 	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
@@ -131,7 +141,7 @@ window.bootlegger.main_pool.list_league_matches = async function(elm='')
 	)
 
 	$('mpool flist').empty();
-	window.bootlegger.main_pool.set_flist_view_type('list');
+	// window.bootlegger.main_pool.set_flist_view_type('list');
 
 	// spawn shite
 	for (var entry of subroot_flds){
@@ -157,6 +167,7 @@ window.bootlegger.main_pool.list_league_matches = async function(elm='')
 // list dirs of the subroot dir
 window.bootlegger.main_pool.list_match_struct = async function(elm='')
 {
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
 	// and not just some random shit
@@ -180,7 +191,7 @@ window.bootlegger.main_pool.list_match_struct = async function(elm='')
 	print('listed match:', dirlisting)
 
 	$('mpool flist').empty();
-	window.bootlegger.main_pool.set_flist_view_type('list');
+	// window.bootlegger.main_pool.set_flist_view_type('list');
 
 	for (var lst of dirlisting){
 		$('mpool flist').append(`
@@ -516,10 +527,10 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 	print('listed media:', window.bootlegger.main_pool.dirlisting)
 
 	$('mpool flist').empty();
-	window.bootlegger.main_pool.set_flist_view_type('grid');
+	window.bootlegger.main_pool.set_flist_view_type('grid', true);
 
 	$('mpool flist').prepend(`
-		<flist-entry fldpath="${window.league_match}" class="folder match" onclick="window.struct_fld = null; window.bootlegger.main_pool.list_match_struct(this)">
+		<flist-entry fldpath="${window.league_match}" class="folder match" onclick="window.struct_fld = null; window.bootlegger.main_pool.list_match_struct(this); window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true);">
 			<etype dir_up>
 			</etype>
 			<ename>../</ename>
@@ -921,7 +932,7 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 	//
 
 	// for now solve this by making an extra request
-	const webm_state =  await window.bootlegger.core.py_get(
+	const webm_state = await window.bootlegger.core.py_get(
 		'poolsys/poolsys',
 		{
 			'action': 'check_webm_status',

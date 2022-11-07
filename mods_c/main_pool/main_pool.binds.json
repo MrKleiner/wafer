@@ -96,6 +96,24 @@
 			"pass_event": false,
 			"pass_element": false,
 			"pass_params": ""
+		},
+
+
+
+
+		{
+			"selector": "#list_grid_switch #show_as_list",
+			"function": "window.bootlegger.main_pool.set_flist_view_type",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": "'list'"
+		},
+		{
+			"selector": "#list_grid_switch #show_as_grid",
+			"function": "window.bootlegger.main_pool.set_flist_view_type",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": "'grid'"
 		}
 
 	],

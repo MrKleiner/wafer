@@ -541,16 +541,21 @@ class mqueue:
 	# important todo: for now the target path is also an id of the task
 	def reg_item(self, tgt_path, tsk):
 		import json
+		from datetime import datetime
+
+		tm = datetime.now().timetuple()
 		rg_info = json.dumps({
 			'input': str(tgt_path),
 			'output': None,
-			'task': str(tsk)
+			'task': str(tsk),
+			'timestamp': '-'.join([str(tm.tm_year), str(tm.tm_mon), str(tm.tm_mday), str(tm.tm_hour), str(tm.tm_min)])
 		})
 
 		# task id is an asbolute filepath + --task_type--
 		task_id = server.util.eval_hash(f'{str(tgt_path)}--{str(tsk)}--', 'sha256')
 		# if this task exists already - don't do shit
-		if (self.qdb / f'{task_id}.qi').is_file():
+		tfile_path = self.qdb / f'{task_id}.qi'
+		if tfile_path.is_file():
 			return 'task exists'
 
 		# else - add it to the registry
@@ -558,7 +563,16 @@ class mqueue:
 		return 'registered a new task'
 
 
-
+	# read queue into a json
+	def list_queue(self):
+		import json
+		tasks = []
+		for qi in self.qdb.glob('*.qi'):
+			tsk = json.loads(qi.read_bytes())
+			tsk['task_id'] = qi.stem
+			tasks.append(tsk)
+		server.bin_jwrite(tasks)
+		server.flush()
 
 
 # important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
@@ -926,6 +940,8 @@ actions = md_actions(
 		# 'resume_q':					pool_sys.mediaq.resume,
 		'resume_q':					pool_sys.temp_resume_shit,
 
+		# debug queue lister
+		'list_q':					pool_sys.mediaq.list_queue,
 
 		# todo: temp here: download a video
 		'get_dl_vid':				pool_sys.get_dl_vid,

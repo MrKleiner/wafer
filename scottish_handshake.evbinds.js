@@ -61,6 +61,8 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('#webm_preview #webm_video_waveform')){window.bootlegger.main_pool.nav_webm_audio(tr_event, event.target.closest('#webm_preview #webm_video_waveform'))}
 	if (event.target.closest('#webm_preview #timeline_ctrl #tl_stop')){window.bootlegger.main_pool.pause_webm()}
 	if (event.target.closest('#webm_preview #timeline_ctrl #tl_play')){window.bootlegger.main_pool.play_webm()}
+	if (event.target.closest('#list_grid_switch #show_as_list')){window.bootlegger.main_pool.set_flist_view_type('list')}
+	if (event.target.closest('#list_grid_switch #show_as_grid')){window.bootlegger.main_pool.set_flist_view_type('grid')}
 
 
 

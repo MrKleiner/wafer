@@ -360,79 +360,275 @@ $this.browser_detection_smart = function(evt)
 {
 	if (window.session_gotcha){return}
 
-	var winner = window.localStorage.getItem('browser_detected')
-	if (!winner){
-		const compat_table = {
-			'chrome': {
-				'yes': [
-					window.isSecureContext ? !!window.FileSystemHandle : true,
-					!!window.ImageCapture,
-					window.isSecureContext ? !!window.navigator.locks.request : true,
-					window.isSecureContext ? !!window.showOpenFilePicker : true,
-					!!window.navigator.share,
-					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
-					!!window.URL,
-					('outputLatency' in (new window.AudioContext)),
-					('backdropFilter' in document.body.style)
-				],
-				'no': [
-					!window.AudioContext.prototype.createMediaStreamTrackSource
-				]
-			},
-			'firefox': {
-				'yes': [
-					!!window.AudioContext.prototype.createMediaStreamTrackSource,
-					window.isSecureContext ? !!window.navigator.locks.request : true,
-					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
-					!!window.URL,
-					('outputLatency' in (new window.AudioContext))
-				],
-				'no': [
-					!window.FileSystemHandle,
-					!window.ImageCapture,
-					!window.navigator.share,
-					!('backdropFilter' in document.body.style)
-				]
-			},
-			'safari': {
-				'yes': [
-					!!window.FileSystemHandle,
-					window.isSecureContext ? !!window.navigator.locks.request : true,
-					window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
-					!!window.navigator.share,
-					('backdropFilter' in document.body.style)
-				],
-				'no': [
-					(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.queryPermission : false,
-					(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.requestPermission : false,
-					!window.ImageCapture,
-					!window.AudioContext.prototype.createMediaStreamTrackSource,
-					!('outputLatency' in (new window.AudioContext)),
+	// var winner = window.localStorage.getItem('browser_detected')
 
-				]
+	const browser_detector = {
+
+		// just so that it looks a little nicer
+		exec: function(){
+			// create the score board
+			const haxtable = this.compat_table()
+
+			// go through each entry
+			var candidates = {
+				'chrome': 0,
+				'firefox': 0,
+				'safari': 0
 			}
-		}
+			// test each system and score browsers
+			for (let sys in haxtable){
+				// https condition
+				if (haxtable[sys].https == true && !window.isSecureContext){continue}
 
-		console.log(compat_table)
-		var candidates = {}
-		for (var browser in compat_table){
-			// count the least amount of false
-			var score_yes = compat_table[browser].yes.filter(number => number != true)
-			var score_no = compat_table[browser].no.filter(number => number != true)
-			candidates[score_yes.length + score_no.length] = browser
-		}
-		print('Browser candidates:', candidates)
-		// final decision
-		var winner = candidates[Math.min(...Object.keys(candidates))]
+				var discovered = this.obj_walk(window, sys, !!haxtable[sys].last)
+				// go trough every browser
+				for (let browser in haxtable[sys]['browsers']){
+					// check whether declared compat matches discovered
+					// only collect mismatches
+					candidates[browser] += (haxtable[sys]['browsers'][browser] != discovered) ? 1 : 0
+				}
+			}
 
-		// don't do this again
-		window.localStorage.setItem('browser_detected', winner)
+			// store it, because why not
+			this.scoreboard = candidates
+
+			// flip keys and objects in the candidates dict
+			var candidate_score = {}
+			const c_keys = Object.keys(candidates)
+			const c_vals = Object.values(candidates)
+			for (let kp_index in c_keys){
+				candidate_score[c_vals[kp_index]] = c_keys[kp_index]
+			}
+
+			// store it, because why not
+			this.scoreboard_flipped = candidate_score
+
+			// also store the winner
+			const winner = candidate_score[Math.min(...Object.keys(candidate_score))]
+			this.winner = winner
+			return winner
+		},
+
+		// basically the main process
+		compat_table: function(){
+			const cp_table = {
+				'chrome': {
+					'yes': [
+						window.isSecureContext ? !!window.FileSystemHandle : true,
+						!!window.ImageCapture,
+						window.isSecureContext ? !!window.navigator.locks.request : true,
+						window.isSecureContext ? !!window.showOpenFilePicker : true,
+						!!window.navigator.share,
+						window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+						!!window.URL,
+						('outputLatency' in (new window.AudioContext)),
+						('backdropFilter' in document.body.style),
+						!!window.VideoFrame,
+						!!window.VideoEncoder
+					],
+					'no': [
+						!window.AudioContext.prototype.createMediaStreamTrackSource
+					]
+				},
+				'firefox': {
+					'yes': [
+						!!window.AudioContext.prototype.createMediaStreamTrackSource,
+						window.isSecureContext ? !!window.navigator.locks.request : true,
+						window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+						!!window.URL,
+						('outputLatency' in (new window.AudioContext))
+					],
+					'no': [
+						!window.FileSystemHandle,
+						!window.ImageCapture,
+						!window.navigator.share,
+						!('backdropFilter' in document.body.style),
+						!window.VideoFrame,
+						!window.VideoEncoder,
+						window.isSecureContext ? !window.showOpenFilePicker : true,
+					]
+				},
+				'safari': {
+					'yes': [
+						!!window.FileSystemHandle,
+						window.isSecureContext ? !!window.navigator.locks.request : true,
+						window.isSecureContext ? ((!!window.PushManager.prototype) ? !!window.PushManager.prototype.getSubscription : false) : true,
+						!!window.navigator.share
+					],
+					'no': [
+						(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.queryPermission : true,
+						(window.FileSystemHandle) ? !window.FileSystemHandle.prototype.requestPermission : true,
+						!window.ImageCapture,
+						!window.AudioContext.prototype.createMediaStreamTrackSource,
+						!('outputLatency' in (new window.AudioContext)),
+						!('backdropFilter' in document.body.style),
+						!window.VideoFrame,
+						!window.VideoEncoder,
+						window.isSecureContext ? !window.showOpenFilePicker : true,
+					]
+				}
+			}
+
+			const alt_table = {
+				'FileSystemHandle': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': true
+					},
+					'https': true
+				},
+				'ImageCapture': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					}
+				},
+				'navigator.locks.request': {
+					'browsers': {
+						'chrome': true,
+						'firefox': true,
+						'safari': true
+					},
+					'https': true
+				},
+				'showOpenFilePicker': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					},
+					'https': true
+				},
+				'navigator.share': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': true
+					},
+					'https': true
+				},
+				'PushManager.prototype.getSubscription': {
+					'browsers': {
+						'chrome': true,
+						'firefox': true,
+						'safari': true
+					},
+					'https': true
+				},
+				'AudioContext.prototype.outputLatency': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					},
+					// last = should only be checked for presence and not execution
+					'last': true
+				},
+				'AudioContext.prototype.createMediaStreamTrackSource': {
+					'browsers': {
+						'chrome': false,
+						'firefox': true,
+						'safari': false
+					},
+					// last = should only be checked for presence and not execution
+					'last': true
+				},
+				'document.body.style.backdropFilter': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					}
+				},
+				'VideoFrame': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					}
+				},
+				'VideoEncoder': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					}
+				},
+				'FileSystemHandle.prototype.queryPermission': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					},
+					'https': true
+				},
+				'FileSystemHandle.prototype.requestPermission': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': false
+					},
+					'https': true
+				},
+				'FileSystemHandle.prototype.isSameEntry': {
+					'browsers': {
+						'chrome': true,
+						'firefox': false,
+						'safari': true
+					},
+					'https': true
+				}
+			}
+
+			return alt_table
+		},
+
+		// walk object path
+		obj_walk: function(ob, tgt, dolast=false, give_func=false){
+			var current = ob
+			const ob_path = tgt.split('.')
+			for (let fpath of ob_path) {
+				if (fpath in current){
+					if (fpath == ob_path.at(-1) && dolast){break}
+					current = current[fpath]
+				}else{
+					return false
+				}
+			}
+		    return (give_func ? current : true)
+		}
 	}
+	var winner = browser_detector.exec()
+
+	// mobile
+	var isMobile = {
+	    Android: function() {
+	        return navigator.userAgent.match(/Android/i);
+	    },
+	    BlackBerry: function() {
+	        return navigator.userAgent.match(/BlackBerry/i);
+	    },
+	    iOS: function() {
+	        return navigator.userAgent.match(/iPhone|iPad|iPod/i);
+	    },
+	    Opera: function() {
+	        return navigator.userAgent.match(/Opera Mini/i);
+	    },
+	    Windows: function() {
+	        return navigator.userAgent.match(/IEMobile/i);
+	    },
+	    any: function() {
+	        return (isMobile.Android() || isMobile.BlackBerry() || isMobile.iOS() || isMobile.Opera() || isMobile.Windows());
+	    }
+	};
 
 	if (winner == 'firefox'){
 		document.body.setAttribute('shitfox', true)
 	}
-	if (winner == 'safari'){
+	// win a fuckoff
+	if (winner == 'safari' && !isMobile.any()){
 		$('body').html(`
 			<div style="display: flex; font-size: 3.1vw; flex-direction: column; width: 100%; height: 100%; align-items: center; justify-content: center">
 				<h1 style="color: red">Safari is NOT supported!! Use ANY other browser EXCEPT Safari!!!</h1>
@@ -440,6 +636,8 @@ $this.browser_detection_smart = function(evt)
 			</div>
 		`);
 	}
+
+	// window.localStorage.setItem('browser_detected', winner)
 
 	window.session_gotcha = true;
 }

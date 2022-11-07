@@ -10,15 +10,22 @@ $this.dirlisting = []
 
 
 // switch between grid and list layouts
-$this.set_flist_view_type = function(tp='list')
+$this.set_flist_view_type = function(tp='list', shadow=false)
 {
+	shadow ? null : window.localStorage.setItem('flist_view_type', tp)
+
+	const mpool = document.querySelector('mpool')
 	if (tp == 'list'){
-		document.querySelector('mpool').removeAttribute('grid');
-		document.querySelector('mpool').setAttribute('list', true);
+		mpool.removeAttribute('grid');
+		mpool.setAttribute('list', true);
+		$('#list_grid_switch *').removeClass('list_grid_switch_active', true);
+		$('#list_grid_switch #show_as_list').addClass('list_grid_switch_active', true);
 	}
 	if (tp == 'grid'){
-		document.querySelector('mpool').removeAttribute('list');
-		document.querySelector('mpool').setAttribute('grid', true);
+		mpool.removeAttribute('list');
+		mpool.setAttribute('grid', true);
+		$('#list_grid_switch *').removeClass('list_grid_switch_active', true);
+		$('#list_grid_switch #show_as_grid').addClass('list_grid_switch_active', true);
 	}
 }
 
@@ -27,6 +34,7 @@ $this.module_loader = async function()
 {
 	print('start loading mpool')
 	await $all.core.sysloader('main_pool', true);
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type') || 'list')
 	$this.restore_protocol()
 	await $this.load_root_dir(false)
 	await $this.go_dir_path()
@@ -74,6 +82,7 @@ $this.await_img_load = function(imgsrc)
 // load the root directory of the entire FTP
 $this.load_root_dir = async function(doup=true)
 {
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool load root dir')
 	$this.media_units_iteration.kill()
 	// list root shite
@@ -91,7 +100,7 @@ $this.load_root_dir = async function(doup=true)
 	// $this.update_vis_path()
 
 	$('mpool flist').empty();
-	$this.set_flist_view_type('list');
+	// $this.set_flist_view_type('list');
 	// spawn shite
 	for (var entry of roots){
 		$('mpool flist').append(`
@@ -107,6 +116,7 @@ $this.load_root_dir = async function(doup=true)
 // list subroot directories
 $this.list_league_matches = async function(elm='')
 {
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	$this.media_units_iteration.kill()
 	print('mpool list matches')
 	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
@@ -127,7 +137,7 @@ $this.list_league_matches = async function(elm='')
 	)
 
 	$('mpool flist').empty();
-	$this.set_flist_view_type('list');
+	// $this.set_flist_view_type('list');
 
 	// spawn shite
 	for (var entry of subroot_flds){
@@ -153,6 +163,7 @@ $this.list_league_matches = async function(elm='')
 // list dirs of the subroot dir
 $this.list_match_struct = async function(elm='')
 {
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
 	// and not just some random shit
@@ -176,7 +187,7 @@ $this.list_match_struct = async function(elm='')
 	print('listed match:', dirlisting)
 
 	$('mpool flist').empty();
-	$this.set_flist_view_type('list');
+	// $this.set_flist_view_type('list');
 
 	for (var lst of dirlisting){
 		$('mpool flist').append(`
@@ -512,10 +523,10 @@ $this.list_media = async function(elm='')
 	print('listed media:', $this.dirlisting)
 
 	$('mpool flist').empty();
-	$this.set_flist_view_type('grid');
+	$this.set_flist_view_type('grid', true);
 
 	$('mpool flist').prepend(`
-		<flist-entry fldpath="${window.league_match}" class="folder match" onclick="window.struct_fld = null; $this.list_match_struct(this)">
+		<flist-entry fldpath="${window.league_match}" class="folder match" onclick="window.struct_fld = null; $this.list_match_struct(this); $this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true);">
 			<etype dir_up>
 			</etype>
 			<ename>../</ename>
@@ -917,7 +928,7 @@ $this.open_webm_preview = async function(elm)
 	//
 
 	// for now solve this by making an extra request
-	const webm_state =  await $all.core.py_get(
+	const webm_state = await $all.core.py_get(
 		'poolsys/poolsys',
 		{
 			'action': 'check_webm_status',
