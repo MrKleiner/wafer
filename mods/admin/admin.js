@@ -199,8 +199,8 @@ $this.save_user_profiles = async function()
 {
 	payload = {};
 	for (var usr of document.querySelectorAll('admin #userlist .usr_profile')){
-		const nick = $(usr).find('input.profile_login').val();
-		const pswd = $(usr).find('input.profile_pswd').val();
+		const nick = $(usr).find('input.profile_login').val().trim();
+		const pswd = $(usr).find('input.profile_pswd').val().trim();
 		payload[nick] = pswd;
 	}
 
