@@ -97,9 +97,10 @@ def giga_json(inp, bt=False):
 
 # generate random token
 # pass True to generate a super long token (sha512)
-def generate_token(do_long=False):
+# bias is a multiplier for the random seed length. Defaults are good enough
+def generate_token(do_long=False, bias=1):
 	from random import random
 	if do_long == True:
-		return eval_hash('!lizard?'.join([str(random()) for rnd in range(128)]), 'sha512')
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(256*bias))]), 'sha512')
 	else:
-		return eval_hash('!lizard?'.join([str(random()) for rnd in range(64)]), 'sha256')
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(64*bias))]), 'sha256')

@@ -4,8 +4,6 @@ from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 
-# File imports
-import asyncio
 
 
 
@@ -13,18 +11,23 @@ import asyncio
 # only has a few functions, but still it's better to have it as a separate class
 class media_gen:
 	def __init__(self):
-		self.dd = 'dd'
+		# todo: this is literally useless
+		# except magix
+		self.ffmpeg = server.Path(server.sv_cfg['ffmpeg'].strip())
+		self.ffprobe = server.Path(server.sv_cfg['ffprobe'].strip())
+		
+
 
 
 	# get video info with ffprobe
-	# takes  video path and {stream=}WHATEVER(nb_read_frames,width,height)
+	# takes video path and {stream=}WHATEVER(nb_read_frames,width,height)
 	def get_video_stats(self, video_path=None, infos='width,height'):
 		import json
 		import subprocess as sp
 
 		# ffprobe params
 		ffprobe_prms = [
-			'/usr/bin/ffprobe',
+			str(self.ffprobe),
 			'-v', 'error',
 			'-select_streams', 'v:0',
 			'-count_frames',
@@ -44,7 +47,7 @@ class media_gen:
 
 	# this is the only obvious way of doing this
 	# aka calling this from js and not waiting for it to return anything
-	# important todo: store these previews in a shared database where file name is sha256 of a video OR its path
+	# todo: store these previews in a shared database where file name is sha256 of a video OR its path
 	# to avoid duplicate previews
 	# it'd also be important to have controls like re-generating/deleting a preview
 	# takes absolute path to the video as an input
@@ -85,7 +88,7 @@ class media_gen:
 		# create ffmpeg params
 		ffmpeg_prms = [
 			# ffmpeg executable
-			'/usr/bin/ffmpeg',
+			str(self.ffmpeg),
 
 			# automatically discard if file exists
 			'-n',
@@ -125,7 +128,7 @@ class media_gen:
 		# ffmpeg -i video.mp4 -f mp3 -ab 192000 -vn music.mp3
 		audio_prms = [
 			# ffmpeg executable
-			'/usr/bin/ffmpeg',
+			str(self.ffmpeg),
 
 			# automatically discard if file exists
 			'-n',
@@ -301,7 +304,7 @@ class media_gen:
 		# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
 		ffmpeg_prms = [
 			# ffmpeg executable
-			'/usr/bin/ffmpeg',
+			str(self.ffmpeg),
 
 			# automatically overwrite if file exists already
 			'-y',
@@ -409,7 +412,66 @@ class media_gen:
 		shutil.move(str(chad_location), str(newloc))
 
 
+	# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
+	# generate a lowres preview of a static image
+	def generate_pic_preview(self, img_path=None):
+		import subprocess as sp
+		from pathlib import Path
 
+		img_path = Path(img_path)
+		if not img_path.is_file():
+			raise Exception('generate_pic_preview: image does not exist under the specified file path')
+
+		# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
+		ffmpeg_prms = [
+			# mpeg
+			'/usr/bin/ffmpeg',
+			# input
+			# '-i', str(engines / pl['img']),
+			'-i', str(img_path),
+			# resize
+			# '-hwaccel', 'cuda',
+			# '-hwaccel_output_format', 'cuda',
+			# '--enable-nvenc',
+			# '--enable-ffnvcodec',
+			# '-h', 'encoder=h264_nvenc',
+			# does nothing
+			# (it works, but it's only for videos)
+			# '-vcodec', 'h264_nvenc',
+			# change size
+			# this will upscale sometimes
+			# '-vf', 'scale=500:-1',
+			# while this is smart
+			# this is quite a hires preview
+			# '-vf', 'scale=w=min(iw\\,500):h=-2',
+			# this one is smaller
+			'-vf', 'scale=w=min(iw\\,300):h=-2',
+			# format
+			'-c:v', 'webp',
+			# ffmpeg encoding type
+			'-f', 'image2pipe',
+			# lossless
+			# quite a heavy load
+			# '-lossless', '1',
+			# make it take even less space
+			'-lossless', '0',
+			# lossless compression
+			# (now is lossy)
+			'-compression_level', '6',
+			'-qscale', '40',
+			# output to stdout
+			'pipe:'
+			# 'fuckoff.webp'
+			# str(tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
+		]
+
+		# webp = subprocess.run(ffmpeg_prms, capture_output=True)
+		webp = None
+		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+			# myFile.write(img_pipe.stdout.read())
+			webp = img_pipe.stdout.read()
+
+		return webp
 
 
 
@@ -418,6 +480,7 @@ class mqueue:
 	def __init__(self):
 
 		# init the mediagen class
+		# (that class is a set of functions which generate actual previews n shit)
 		self.mgen = media_gen()
 
 		# store possible actions
@@ -428,6 +491,9 @@ class mqueue:
 
 		# shortcut to the queue folder
 		self.qdb = server.preview_db / 'preview_queue'
+
+		# ensure that the preview queue folder exists
+		self.qdb.mkdir(exist_ok=True)
 
 	# this writes an error log to a file
 	def errlog_exc(self, err):
@@ -657,68 +723,6 @@ class poolsys:
 		server.flush()
 
 
-
-	# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
-	# generate a lowres preview of a static image
-	def generate_pic_preview(self, img_path=None):
-		import subprocess as sp
-		from pathlib import Path
-
-		img_path = Path(img_path)
-		if not img_path.is_file():
-			raise Exception('generate_pic_preview: image does not exist under the specified file path')
-
-		# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
-		ffmpeg_prms = [
-			# mpeg
-			'/usr/bin/ffmpeg',
-			# input
-			# '-i', str(engines / pl['img']),
-			'-i', str(img_path),
-			# resize
-			# '-hwaccel', 'cuda',
-			# '-hwaccel_output_format', 'cuda',
-			# '--enable-nvenc',
-			# '--enable-ffnvcodec',
-			# '-h', 'encoder=h264_nvenc',
-			# does nothing
-			# (it works, but it's only for videos)
-			# '-vcodec', 'h264_nvenc',
-			# change size
-			# this will upscale sometimes
-			# '-vf', 'scale=500:-1',
-			# while this is smart
-			# this is quite a hires preview
-			# '-vf', 'scale=w=min(iw\\,500):h=-2',
-			# this one is smaller
-			'-vf', 'scale=w=min(iw\\,400):h=-2',
-			# format
-			'-c:v', 'webp',
-			# ffmpeg encoding type
-			'-f', 'image2pipe',
-			# lossless
-			# quite a heavy load
-			# '-lossless', '1',
-			# make it take even less space
-			'-lossless', '0',
-			# lossless compression
-			# (now is lossy)
-			'-compression_level', '6',
-			'-qscale', '50',
-			# output to stdout
-			'pipe:'
-			# 'fuckoff.webp'
-			# str(tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
-		]
-
-		# webp = subprocess.run(ffmpeg_prms, capture_output=True)
-		webp = None
-		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-			# myFile.write(img_pipe.stdout.read())
-			webp = img_pipe.stdout.read()
-
-		return webp
-
 	# basically an image preview gateway
 	def load_image_preview(self):
 		import json
@@ -740,7 +744,7 @@ class poolsys:
 		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
 
 		# generate the preview
-		webp = self.generate_pic_preview(tgt_path)
+		webp = self.mgen.generate_pic_preview(tgt_path)
 
 		# Save preview to the preview folder
 		preview_path.write_bytes(webp)

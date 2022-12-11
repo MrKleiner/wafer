@@ -82,6 +82,7 @@ $this.await_img_load = function(imgsrc)
 // load the root directory of the entire FTP
 $this.load_root_dir = async function(doup=true)
 {
+	$('mpool flist').empty();
 	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool load root dir')
 	$this.media_units_iteration.kill()
@@ -99,7 +100,7 @@ $this.load_root_dir = async function(doup=true)
 	doup ? $this.update_vis_path() : null
 	// $this.update_vis_path()
 
-	$('mpool flist').empty();
+	
 	// $this.set_flist_view_type('list');
 	// spawn shite
 	for (var entry of roots){
@@ -116,6 +117,8 @@ $this.load_root_dir = async function(doup=true)
 // list subroot directories
 $this.list_league_matches = async function(elm='')
 {
+	$('mpool flist').empty();
+
 	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	$this.media_units_iteration.kill()
 	print('mpool list matches')
@@ -135,8 +138,7 @@ $this.list_league_matches = async function(elm='')
 		},
 		'json'
 	)
-
-	$('mpool flist').empty();
+	
 	// $this.set_flist_view_type('list');
 
 	// spawn shite
@@ -163,6 +165,8 @@ $this.list_league_matches = async function(elm='')
 // list dirs of the subroot dir
 $this.list_match_struct = async function(elm='')
 {
+	$('mpool flist').empty();
+
 	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool list match struct')
 	// important todo: as was mentioned below this should be a system
@@ -186,7 +190,6 @@ $this.list_match_struct = async function(elm='')
 
 	print('listed match:', dirlisting)
 
-	$('mpool flist').empty();
 	// $this.set_flist_view_type('list');
 
 	for (var lst of dirlisting){

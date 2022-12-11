@@ -1,13 +1,28 @@
 
+# Documentation
+# 
+
+
+
+
+
+
+
+
+
+
 
 
 class fjournal:
 	"""a file watcher"""
+	# srv = server variable
 	def __init__(self, srv):
 		from pathlib import Path
 		self.Path = Path
-		self.jdb = srv.preview_db / 'journal'
+		self.jdb = srv.sysdb_path / 'journal'
 		self.srv = srv
+		# ensure that the journal folder exists
+		self.jdb.mkdir(exist_ok=True)
 
 	# takes the path to the file and the life length
 	# life in hours
@@ -64,24 +79,13 @@ class fjournal:
 				continue
 
 
-class server_logpswd_db:
-	def __init__(self, obj, db_path):
-		self.db = obj
-		self.path = db_path
-
-class server_allowance_db:
-	def __init__(self, obj, db_path):
-		self.db = obj
-		self.path = db_path
-
-
-
 class server:
-	"""All the stuff passed to server + server config"""
+	"""All the stuff passed to the server + server config"""
 	def __init__(self, cgi, sys, cgitb):
 		# from util import giga_json
 		from pathlib import Path
-		import json
+		from server_config import server_config as svconf
+		import json, platform
 		import util
 
 		# traceback messages
@@ -89,6 +93,7 @@ class server:
 
 		# don't append modules many times...
 		self.Pathl = Path
+		self.Path = Path
 		self.json = json
 
 		# input sys module
@@ -117,33 +122,42 @@ class server:
 				self.server_root = pr
 				break
 
-		# raw server config
-		self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
+		# todo: just don't bother and distribute two separate versions for linux and for windows
+		self.platform = platform.system().lower()
 
-		# system db with other folders, like previews and temp shit
-		self.preview_db = Path(self.sv_cfg['preview_db'])
+		# raw server config
+		# self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
+		self.sv_cfg = svconf
 
 		# system root, aka root of the file pool
-		self.sys_root = Path(self.sv_cfg['system_root'])
+		# important todo: better name it ftp_root
+		# self.sys_root = Path(self.sv_cfg['system_root'])
+		self.ftp_root = Path(self.sv_cfg['system_root'])
+
+		# util db, like temp files and media previews
+		# preview_db
+		self.sysdb_path = Path(self.sv_cfg['sysdb'])
 
 		# temp dir for temp files
-		self.tmp_dir = self.preview_db / 'temp_shite'
+		self.tmp_dir = self.sysdb_path / 'temp_shite'
 
-		# self.user_token = self.auth_db.get(url_params.get('auth'))
+
+
+		# util functions from the util.py file
 		self.util = util
 
-		#
-		# Ensure that all the system folders exist
-		#
 
-		# important todo: is it bad to do this on each request ?
-		(self.preview_db / 'temp_shite').mkdir(exist_ok=True)
-		(self.preview_db / 'journal').mkdir(exist_ok=True)
-		(self.preview_db / 'preview_queue').mkdir(exist_ok=True)
 
 		#
 		# applicable file formats
 		#
+
+		# important todo: this has to be configurable
+		# it's not a problem performance wise (declaring 2 vars takes like 0 milliseconds)
+		# but it has to be configurable from the control panel
+
+		# one important excuse of this being hardcoded is that some file formats are not supported by ffmpeg
+		# but are supported by image magick
 
 		self.allowed_vid = [
 			'mp4',
@@ -152,7 +166,10 @@ class server:
 			'ts',
 			'mts',
 			'mkv',
-			'avi'
+			'avi',
+			'mpeg',
+			'ogv',
+			'3gp'
 		]
 
 		self.allowed_img = [
@@ -241,6 +258,11 @@ class server:
 		if not floc.is_file():
 			raise Exception('x_files transfer: file path does not exist')
 
+		# src from hello.py:
+		# sys.stdout.write(b'Content-Type: application/octet-stream\r\n')
+		# sys.stdout.write(b'Content-Disposition: attachment; filename="bigfile.mp4"\r\n')
+		# sys.stdout.write(b'X-Sendfile: /home/basket/scottish_handshake/db/20181225_182650.ts\r\n\r\n')
+
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n'.encode())
 		self.inp_sys.stdout.buffer.write(f"""Content-Disposition: attachment; filename="{str(flname)}"\r\n""".encode())
 		self.inp_sys.stdout.buffer.write(f"""X-Sendfile: {str(floc)}\r\n\r\n""".encode())
@@ -248,22 +270,6 @@ class server:
 		self.inp_sys.stdout.buffer.flush()
 		self.inp_sys.stdout.flush()
 		self.inp_sys.exit()
-
-
-	# login,password,token database
-	@property
-	def auth_db(self):
-		db_pt = self.Pathl(self.sv_cfg['auth_db_loc'])
-		db_obj = self.json.loads(db_pt.read_bytes())
-		return server_logpswd_db(db_obj, db_pt)
-
-	# allowance, like admin and modules
-	@property
-	def alw_db(self):
-		db_pt = self.Pathl(self.sv_cfg['clearance_db'])
-		db_obj = self.json.loads(db_pt.read_bytes())
-		return server_allowance_db(db_obj, db_pt)
-
 
 
 
@@ -282,6 +288,7 @@ class md_actions:
 		else:
 			self.srv.bin_write('invalid action'.encode())
 			self.srv.flush()
+
 
 
 
