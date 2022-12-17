@@ -17,6 +17,7 @@ def run_setup():
 	from pathlib import Path
 	import json, sqlite3, shutil, datetime, base64
 	from server_config import server_config
+	from htcompile import compile_server
 	import util
 
 	serverdir = Path(__file__).parents[1]
@@ -55,6 +56,8 @@ def run_setup():
 	# and re-create the dir
 	authdb_root.mkdir(exist_ok=True)
 	(authdb_root / 'authsys').mkdir()
+	syscfg = authdb_root / 'cfg'
+	syscfg.mkdir()
 	authdb_root = authdb_root / 'authsys'
 
 	#
@@ -73,6 +76,14 @@ def run_setup():
 		);
 	""")
 
+
+
+
+
+
+	# ===================================================
+	#            CREATE A DEFAULT OWNER ACCOUNT
+	# ===================================================
 	owner_token = util.generate_token(True, 3)
 
 	cursor_obj.execute(f"""
@@ -85,10 +96,6 @@ def run_setup():
 			"{hashlib.sha256('owner'.encode() + 'bagpipes'.encode()).hexdigest()}"
 		)
 	""")
-
-	connection.commit()
-	connection.close()
-
 
 
 	#
@@ -107,13 +114,13 @@ def run_setup():
 	(authdb_root / 'details' / owner_token / 'info.lzrd').write_bytes(json.dumps(owner_info))
 
 
-	owner_token = {
+	owner_token_file = {
 		'userid': owner_token,
 		'created': datetime.datetime.now().isoformat(),
 		'crypto': util.generate_token(True, 5),
 		'lifetime': 2_592_000_000
 	}
-	(authdb_root / 'details' / owner_token / 'token.lzrd').write_bytes(json.dumps(owner_token))
+	(authdb_root / 'details' / owner_token / 'token.lzrd').write_bytes(json.dumps(owner_token_file))
 
 
 	owner_details = {
@@ -130,6 +137,75 @@ def run_setup():
 
 
 
+
+
+
+
+
+	# ===================================================
+	#            CREATE A DEFAULT EMPTY USER
+	# ===================================================
+	guest_token = util.generate_token(True, 3)
+
+	cursor_obj.execute(f"""
+		INSERT INTO authdb
+		(user_id, login, pswd, auth_hash)
+		VALUES(
+			"{guest_token}",
+			"{base64.b64encode('guest'.encode()).decode()}",
+			"{base64.b64encode('1'.encode()).decode()}",
+			"{hashlib.sha256('guest'.encode() + '1'.encode()).hexdigest()}"
+		)
+	""")
+
+
+	#
+	# Now create the details dir
+	#
+	(authdb_root / 'details').mkdir()
+
+	# add owner
+	(authdb_root / 'details' / guest_token).mkdir()
+	# write owner stuff
+	guest_info = {
+		'created': datetime.datetime.now().isoformat(),
+		'isadmin': False,
+		'change_creds': False
+	}
+	(authdb_root / 'details' / guest_token / 'info.lzrd').write_bytes(json.dumps(guest_info))
+
+
+	guest_token_file = {
+		'userid': guest_token,
+		'created': datetime.datetime.now().isoformat(),
+		'crypto': util.generate_token(True, 1),
+		'lifetime': 2_592_000_000
+	}
+	(authdb_root / 'details' / guest_token / 'token.lzrd').write_bytes(json.dumps(guest_token_file))
+
+
+	guest_details = {
+		'global': {},
+		'target': {}
+	}
+	(authdb_root / 'details' / guest_token / 'rules.lzrd').write_bytes(json.dumps(guest_details))
+
+	guest_journal_file = {
+		'last_login_ip': '',
+		'last_login_time': ''
+	}
+	(authdb_root / 'details' / guest_token / 'journal.lzrd').write_bytes(json.dumps(guest_journal_file))
+
+
+	connection.commit()
+	connection.close()
+
+	(syscfg / 'default_user').write_bytes(guest_token.encode())
+
+
+
+
+
 	#
 	# create sysdb stuff
 	#
@@ -143,6 +219,16 @@ def run_setup():
 	(sysdb_root / 'journal').mkdir()
 	(sysdb_root / 'preview_queue').mkdir()
 	(sysdb_root / 'temps').mkdir()
+
+
+
+	#
+	# Finally, compile the server
+	#
+
+	compile_server()
+
+
 
 
 	print('Setup done')

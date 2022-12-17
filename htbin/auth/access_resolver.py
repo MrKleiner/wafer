@@ -1,13 +1,7 @@
 
+# panzerfaust
 
-
-# from datetime import datetime, timedelta, date
-# sex = datetime.now().isoformat()
-# datetime.fromisoformat(sex)
-
-
-# this evaulates a single rule from a ruleset
-def rule_resolver(pth, rule, wannawrite=False):
+def resolver(pth, rule, wannawrite=False):
 	declared = Path(rule['rule'])
 	tgt = Path(pth)
 
@@ -71,17 +65,6 @@ def rule_resolver(pth, rule, wannawrite=False):
 			return False
 
 	return True
-
-
-# this takes a set of rules and returns the final decision
-def ruleset_evaluator(ruleset, tgt_path, request_write=False):
-	final_decision = False
-	for therule in ruleset:
-		final_decision = rule_resolver(tgt_path, therule, request_write)
-
-	return final_decision
-
-
 
 
 

@@ -651,70 +651,36 @@ class poolsys:
 
 
 
-	def list_leagues(self):
-		import json
 
-		server.bin_jwrite([fld.name for fld in server.sys_root.glob('*') if fld.is_dir()])
-		# server.bin_write(str(server.sys_root).encode())
-		server.flush()
-
-
-	def list_matches_w_subroot(self):
-		import json
-
-		mws = {}
-		for cmd in server.sys_root.glob('*'):
-			if not cmd.is_dir():
-				continue
-			mws[cmd.name] = [match.name for match in cmd.glob('*') if match.is_dir()]
-
-		server.bin_jwrite(mws)
-		server.flush()
-
-
-
-	def list_league_matches(self):
-		import json
-		from pathlib import Path
-
-		if not server.prms['league_name']:
-			return []
-
-		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['league_name'])).glob('*') if fld.is_dir()])
-		server.flush()
-
-
-
-	def list_match_struct(self):
-		import json
-		from pathlib import Path
-
-		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['match_name'])).glob('*') if fld.is_dir()])
-		server.flush()
-
-
-	def list_media(self):
+	def list_dir(self):
 		import json, os
+		# todo: server already has pathlib
 		from pathlib import Path
 
 		matches = []
-		# todo: continue statements were cool
+
 		for match in (server.sys_root / Path(server.prms['target'])).glob('*'):
-			if match.is_dir():
-				continue
+			if not match.is_dir():
+				fl_info = {
+					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
+					'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
+					'etype': 'file',
+					'path': str(match.relative_to(server.sys_root)),
+					'flname': match.name
+				}
 
-			fl_info = {
-				'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
-				'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
-				'etype': 'file',
-				'path': str(match.relative_to(server.sys_root)),
-				'flname': match.name
-			}
+				if match.suffix.strip('.').lower() in server.allowed_vid:
+					fl_info['etype'] = 'vid'
+				if match.suffix.strip('.').lower() in server.allowed_img:
+					fl_info['etype'] = 'img'
+			else:
+				fl_info = {
+					'lfs': False,
+					'stats': '0/0',
+					'etype': 'dir',
+					'dirname': match.name
+				}
 
-			if match.suffix.strip('.').lower() in server.allowed_vid:
-				fl_info['etype'] = 'vid'
-			if match.suffix.strip('.').lower() in server.allowed_img:
-				fl_info['etype'] = 'img'
 
 			matches.append(fl_info)
 
@@ -928,10 +894,7 @@ pool_sys = poolsys()
 actions = md_actions(
 	server,
 	{
-		'list_leagues': 			pool_sys.list_leagues,
-		'list_league_matches': 		pool_sys.list_league_matches,
-		'list_match_struct': 		pool_sys.list_match_struct,
-		'list_media': 				pool_sys.list_media,
+		'list_dir': 				pool_sys.list_dir,
 		'load_image_preview': 		pool_sys.load_image_preview,
 		'load_fullres_pic': 		pool_sys.load_fullres_pic,
 		'load_video_preview': 		pool_sys.load_video_preview,

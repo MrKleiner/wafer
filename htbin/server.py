@@ -87,6 +87,7 @@ class server:
 		from server_config import server_config as svconf
 		import json, platform
 		import util
+		from auth.auth import wfauth
 
 		# traceback messages
 		cgitb.enable()
@@ -111,6 +112,7 @@ class server:
 
 		# read body content, if any
 		self.bin = b''
+		self.headers = {}
 		try:
 			self.bin = sys.stdin.buffer.read()
 		except:
@@ -138,14 +140,15 @@ class server:
 		# preview_db
 		self.sysdb_path = Path(self.sv_cfg['sysdb'])
 
+		# auth db path
+		self.authdb_path = Path(self.sv_cfg['authdb'])
+
 		# temp dir for temp files
 		self.tmp_dir = self.sysdb_path / 'temp_shite'
 
 
-
 		# util functions from the util.py file
 		self.util = util
-
 
 
 		#
@@ -195,6 +198,7 @@ class server:
 			'hdr'
 		]
 
+		# special means ffmpeg cannot deal with it
 		self.allowed_img_special = [
 			'tga',
 			'psd',
@@ -202,6 +206,11 @@ class server:
 			'raw',
 			'hdr'
 		]
+
+		#
+		# do auth
+		#
+		self.wfauth = wfauth(self)
 
 
 	# journal which keeps track of files to delete
@@ -224,7 +233,10 @@ class server:
 	def flush(self, add_b=None):
 		if add_b:
 			self.bin_write(add_b)
-		# general info
+		# add headers
+		for h in self.headers:
+			self.inp_sys.stdout.buffer.write(f'{h}: {self.headers[h]}\r\n')
+		# content type
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
 		self.inp_sys.stdout.buffer.write(self.sv_buffer)
@@ -233,6 +245,8 @@ class server:
 		self.inp_sys.stdout.flush()
 		self.inp_sys.exit()
 
+	def set_header(self, hkey, hval):
+		self.headers[hkey] = hval
 
 	# add to bin
 	# expects bytes
@@ -271,6 +285,11 @@ class server:
 		self.inp_sys.stdout.flush()
 		self.inp_sys.exit()
 
+
+	# it shouldn't be here, but it's here because of performance reasons
+	# loads json from a path
+	def jload(self, pth):
+		return self.json.loads(self.Path(pth).read_bytes())
 
 
 

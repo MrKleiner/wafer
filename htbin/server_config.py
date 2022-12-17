@@ -1,3 +1,5 @@
+
+
 # Server hosters are probably used to retarded syntaxes by now,
 # so this should be fine
 # Afterall, this is ~97 times more readable than apache or lighttpd syntax...
@@ -8,13 +10,14 @@
 
 # it's highly recommended to always use forward slashes in the filepaths,
 # even when configuring for windows
+# (windows support coming soon)
 
-# bro tip: When creating shit from root - don't forget to change the rights
+# bro tip: When creating shit from root - don't forget to change the access rights
 
 server_config = {
 
 	# -------------------------------
-	# !!!!!!! Server type !!!!!!!
+	#  !!!!!!! Server type !!!!!!!
 	# -------------------------------
 	# which system are you running (apache, lighttpd...)
 	# This is very important and messing this up will break half the system
@@ -25,26 +28,29 @@ server_config = {
 
 	"target_sys": "lighttpd",
 
+	# don't touch this
+	"xs_override": "",
+
 
 
 	# Root of the target file system
 	# basically think of this as of FTP root
 	"system_root": "/home/basket/water",
 
-	# absolute path to ffmpeg, leave blank to use bundled (bundled includes both windows and linux verion)
+	# absolute path to ffmpeg
 	# on linux it's usually /usr/bin/ffmpeg /usr/bin/ffprobe
 	"ffmpeg": "/usr/bin/ffmpeg",
 
-	# absolute path to ffprobe, leave blank to use bundled (bundled includes both windows and linux verion)
+	# absolute path to ffprobe
 	"ffprobe": "/usr/bin/ffprobe",
 
 	# Image Magick executable location
-	# blank = use bundled (recommended, includes both windows and linux verion)
+	# On Linux it's pretty weird: /usr/bin/convert
 	"magix": "/usr/bin/convert",
 
 	# path to a folder where to unfold the LIGHTWEIGHT database system
 	# the folder doesn't has to exist beforehand
-	# this databse stores user info and auth system
+	# this databse stores user info, auth system and software config
 	# it should never take more than 1-2GB of diskspace
 	# ( please place me on an SSD or a really fast HDD :3 )
 	"authdb": "/home/basket/wafer_user_db",
@@ -54,7 +60,7 @@ server_config = {
 	# the folder doesn't has to exist beforehand
 	# it might get quite big
 	# aka if serverside zipping is enabled and someone downloads a folder of photos - 
-	# 1GB zip file is generated
-	# Switch between serverside and clientside zipping is coming soon
+	# ~1GB zip file is generated
+	# A switch between serverside and clientside zipping is coming soon
 	"sysdb": "/home/basket/wafer_user_db"
 }
