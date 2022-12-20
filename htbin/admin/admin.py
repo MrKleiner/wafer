@@ -21,29 +21,41 @@ class user_ctrl:
 
 	# init usually means auth
 	def __init__(self, auth=None):
-		if not server.alw_db.db.get(auth):
-			server.bin_jwrite({'status': '1809246/missing'})
-			server.flush()
-
-		if not 'admin' in server.alw_db.db[auth]:
+		if not server.wfauth.isadmin:
 			server.bin_jwrite({'status': '1809246/hobo'})
 			server.flush()
 
 
 	# load users database
 	# token is not passed intentionally
+	# important todo: decode login/pswd on the server or on the client ?
+	# for now, decode on the client
 	def get_user_list(self):
-		import json
+		import sqlite3
 
 		users = []
 
-		for usr in server.auth_db.db:
+		# get user IDs, logins and passwords
+		connection = sqlite3.connect(str(server.authdb_path / 'authsys' / 'users' / 'userdb.db'))
+		cursor_obj = connection.cursor()
+		cursor_obj.execute(f"""
+			SELECT
+				user_id, login, pswd
+			FROM
+				authdb
+		""")
+		user_creds = cursor_obj.fetchall()
+		connection.close()
+
+		# for every user write down his login creds and read user info from disk
+		for usr in user_creds:
 			users.append({
-				'login': usr,
-				'pswd': server.auth_db.db[usr]['pswd']
+				'userid': usr[0],
+				'login': usr[1],
+				'pswd': usr[2],
+				'rules': server.jload(server.authdb_path / 'authsys' / 'details' / usr[0] / 'rules.lzrd')
 			})
 
-		# return json.dumps(users)
 		server.bin_jwrite(users)
 		server.flush()
 

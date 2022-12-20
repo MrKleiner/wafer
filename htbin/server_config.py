@@ -35,7 +35,7 @@ server_config = {
 
 	# Root of the target file system
 	# basically think of this as of FTP root
-	"system_root": "/home/basket/water",
+	"system_root": "/home/basket/wafer_ftp",
 
 	# absolute path to ffmpeg
 	# on linux it's usually /usr/bin/ffmpeg /usr/bin/ffprobe
@@ -62,5 +62,5 @@ server_config = {
 	# aka if serverside zipping is enabled and someone downloads a folder of photos - 
 	# ~1GB zip file is generated
 	# A switch between serverside and clientside zipping is coming soon
-	"sysdb": "/home/basket/wafer_user_db"
+	"sysdb": "/home/basket/wafer_sys_db"
 }

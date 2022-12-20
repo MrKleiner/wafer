@@ -60,6 +60,8 @@ def eval_hash(st, h='md5'):
 		hash_obj = hashlib.sha256(hasher)
 	if h == 'sha512':
 		hash_obj = hashlib.sha512(hasher)
+	if h == 'sha1':
+		hash_obj = hashlib.sha1(hasher)
 
 	return hash_obj.hexdigest()
 
@@ -97,10 +99,14 @@ def giga_json(inp, bt=False):
 
 # generate random token
 # pass True to generate a super long token (sha512)
+# pass string 'short' to generate short
 # bias is a multiplier for the random seed length. Defaults are good enough
 def generate_token(do_long=False, bias=1):
 	from random import random
+	if do_long == 'short':
+		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(256*bias))]), 'sha1')
 	if do_long == True:
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(256*bias))]), 'sha512')
 	else:
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(64*bias))]), 'sha256')
+

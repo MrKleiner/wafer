@@ -15,12 +15,12 @@
 
 def run_setup():
 	from pathlib import Path
-	import json, sqlite3, shutil, datetime, base64
+	import json, sqlite3, shutil, datetime, base64, hashlib
 	from server_config import server_config
 	from htcompile import compile_server
 	import util
 
-	serverdir = Path(__file__).parents[1]
+	serverdir = Path(__file__).absolute().parents[1]
 
 	print('Running setup...')
 
@@ -56,9 +56,9 @@ def run_setup():
 	# and re-create the dir
 	authdb_root.mkdir(exist_ok=True)
 	(authdb_root / 'authsys').mkdir()
+	authdb_root = authdb_root / 'authsys'
 	syscfg = authdb_root / 'cfg'
 	syscfg.mkdir()
-	authdb_root = authdb_root / 'authsys'
 
 	#
 	# Create and initialize the user database
@@ -76,7 +76,10 @@ def run_setup():
 		);
 	""")
 
-
+	#
+	# Now create the details dir
+	#
+	(authdb_root / 'details').mkdir()
 
 
 
@@ -84,7 +87,7 @@ def run_setup():
 	# ===================================================
 	#            CREATE A DEFAULT OWNER ACCOUNT
 	# ===================================================
-	owner_token = util.generate_token(True, 3)
+	owner_token = util.generate_token(False, 3)
 
 	cursor_obj.execute(f"""
 		INSERT INTO authdb
@@ -98,11 +101,6 @@ def run_setup():
 	""")
 
 
-	#
-	# Now create the details dir
-	#
-	(authdb_root / 'details').mkdir()
-
 	# add owner
 	(authdb_root / 'details' / owner_token).mkdir()
 	# write owner stuff
@@ -111,29 +109,29 @@ def run_setup():
 		'isadmin': True,
 		'change_creds': True
 	}
-	(authdb_root / 'details' / owner_token / 'info.lzrd').write_bytes(json.dumps(owner_info))
+	(authdb_root / 'details' / owner_token / 'info.lzrd').write_bytes(json.dumps(owner_info).encode())
 
 
 	owner_token_file = {
 		'userid': owner_token,
 		'created': datetime.datetime.now().isoformat(),
-		'crypto': util.generate_token(True, 5),
+		'crypto': util.generate_token(False, 5),
 		'lifetime': 2_592_000_000
 	}
-	(authdb_root / 'details' / owner_token / 'token.lzrd').write_bytes(json.dumps(owner_token_file))
+	(authdb_root / 'details' / owner_token / 'token.lzrd').write_bytes(json.dumps(owner_token_file).encode())
 
 
 	owner_details = {
-		'global': {},
-		'target': {}
+		'global': [],
+		'target': []
 	}
-	(authdb_root / 'details' / owner_token / 'rules.lzrd').write_bytes(json.dumps(owner_details))
+	(authdb_root / 'details' / owner_token / 'rules.lzrd').write_bytes(json.dumps(owner_details).encode())
 
 	journal_file = {
 		'last_login_ip': '',
 		'last_login_time': ''
 	}
-	(authdb_root / 'details' / owner_token / 'journal.lzrd').write_bytes(json.dumps(journal_file))
+	(authdb_root / 'details' / owner_token / 'journal.lzrd').write_bytes(json.dumps(journal_file).encode())
 
 
 
@@ -145,7 +143,7 @@ def run_setup():
 	# ===================================================
 	#            CREATE A DEFAULT EMPTY USER
 	# ===================================================
-	guest_token = util.generate_token(True, 3)
+	guest_token = util.generate_token(False, 3)
 
 	cursor_obj.execute(f"""
 		INSERT INTO authdb
@@ -159,11 +157,6 @@ def run_setup():
 	""")
 
 
-	#
-	# Now create the details dir
-	#
-	(authdb_root / 'details').mkdir()
-
 	# add owner
 	(authdb_root / 'details' / guest_token).mkdir()
 	# write owner stuff
@@ -172,29 +165,29 @@ def run_setup():
 		'isadmin': False,
 		'change_creds': False
 	}
-	(authdb_root / 'details' / guest_token / 'info.lzrd').write_bytes(json.dumps(guest_info))
+	(authdb_root / 'details' / guest_token / 'info.lzrd').write_bytes(json.dumps(guest_info).encode())
 
 
 	guest_token_file = {
 		'userid': guest_token,
 		'created': datetime.datetime.now().isoformat(),
-		'crypto': util.generate_token(True, 1),
+		'crypto': util.generate_token(False, 1),
 		'lifetime': 2_592_000_000
 	}
-	(authdb_root / 'details' / guest_token / 'token.lzrd').write_bytes(json.dumps(guest_token_file))
+	(authdb_root / 'details' / guest_token / 'token.lzrd').write_bytes(json.dumps(guest_token_file).encode())
 
 
 	guest_details = {
-		'global': {},
-		'target': {}
+		'global': [],
+		'target': []
 	}
-	(authdb_root / 'details' / guest_token / 'rules.lzrd').write_bytes(json.dumps(guest_details))
+	(authdb_root / 'details' / guest_token / 'rules.lzrd').write_bytes(json.dumps(guest_details).encode())
 
 	guest_journal_file = {
 		'last_login_ip': '',
 		'last_login_time': ''
 	}
-	(authdb_root / 'details' / guest_token / 'journal.lzrd').write_bytes(json.dumps(guest_journal_file))
+	(authdb_root / 'details' / guest_token / 'journal.lzrd').write_bytes(json.dumps(guest_journal_file).encode())
 
 
 	connection.commit()

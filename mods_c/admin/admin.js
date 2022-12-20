@@ -24,19 +24,64 @@ window.bootlegger.admin.load_module = async function()
 	print('loaded users', users)
 	// spawn users in GUI
 	// todo: this should alctually call add user function and pass login/password
-	try {
-		for (var usr of users){
-			$('admin #userlist').append(`
-				<div class="usr_profile">
-					<input type="text" class="profile_login" placeholder="Login" value="${usr['login']}">
+	for (var usr of users){
+
+		var usr_gl_rules = '';
+		for (let glr of usr.rules.global){
+			// usr_gl_rules += `<div class="gl_rule">${glr}</div>`
+			usr_gl_rules += `<input type="text" class="gl_rule" value="${glr}">`
+		}
+
+		var tgt_rules = '';
+		for (let tgtr of usr.rules.target){
+			usr_gl_rules += `
+				<div class="tgt_rule">
+					<div class="tgt_rule_cbox tgt_rule_path">Rule: <input type="text" value="${tgtr.rule}"></div>
+					<div class="tgt_rule_cbox tgt_rule_write">Write: <input type="checkbox" ${tgtr.write ? 'checked' : ''}></div>
+					<div class="tgt_rule_cbox tgt_rule_recursive">Recursive: <input type="checkbox" ${tgtr.recursive ? 'checked' : ''}></div>
+
+					<div class="tgt_rule_for_each">
+						<div class="tgt_rule_cbox tgt_rule_use_for_each">For Each: <input type="checkbox" ${tgtr.for_each.use ? 'checked' : ''}></div>
+						<div class="tgt_rule_cbox tgt_rule_for_each_depth">Depth: <input type="number" value="${tgtr.for_each.deep}"></div>
+						<div class="tgt_rule_cbox tgt_rule_for_each_depth">With Name: <input type="text" value="${tgtr.for_each.with_name}"></div>
+					</div>
+				</div>
+			`
+		}
+		$('admin #userlist').append(`
+			<div class="usr_profile">
+				<div class="usr_auth_info">
+					<input type="text" class="profile_login" placeholder="Login" value="${lizard.atob(usr['login'])}">
 					<div class="separator">:</div>
-					<input type="text" class="profile_pswd" placeholder="Password" value="${usr['pswd']}">
+					<input type="text" class="profile_pswd" placeholder="Password" value="${lizard.atob(usr['pswd'])}">
 					<img class="userlist_kill_user" draggable="false" src="../assets/rubbish.png">
 				</div>
-			`);
-		}
-	} catch (error) {}
-	
+
+				<div class="usr_access_rules">
+					<div class="usr_global_rules">
+						<div class="gl_rules_header">Global:</div>
+						<div class="gl_rules_pool">${usr_gl_rules}</div>
+					</div>
+
+					<div class="usr_tgt_rules">
+						<div class="tgt_rules_header">Targeted:</div>
+						<div class="tgt_rules_pool">${tgt_rules}</div>
+					</div>
+
+				</div>
+
+			</div>
+		`);
+	}
+
+
+
+
+
+
+
+
+	/*
 
 	//
 	// Load allowance list
@@ -83,6 +128,7 @@ window.bootlegger.admin.load_module = async function()
 	);
 
 	window.bootlegger.admin.load_folder_makers()
+	*/
 
 }
 

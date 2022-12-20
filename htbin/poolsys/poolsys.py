@@ -490,7 +490,7 @@ class mqueue:
 		}
 
 		# shortcut to the queue folder
-		self.qdb = server.preview_db / 'preview_queue'
+		self.qdb = server.sysdb_path / 'preview_queue'
 
 		# ensure that the preview queue folder exists
 		self.qdb.mkdir(exist_ok=True)
@@ -650,8 +650,6 @@ class poolsys:
 		self.mediaq = mqueue()
 
 
-
-
 	def list_dir(self):
 		import json, os
 		# todo: server already has pathlib
@@ -659,13 +657,18 @@ class poolsys:
 
 		matches = []
 
-		for match in (server.sys_root / Path(server.prms['target'])).glob('*'):
+		for match in (server.ftp_root / Path(server.prms['target'])).glob('*'):
+
+			# admins are allowed to view anything
+			if not server.wfauth.resolve_path(match) and not server.wfauth.isadmin:
+				continue
+
 			if not match.is_dir():
 				fl_info = {
 					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
 					'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
 					'etype': 'file',
-					'path': str(match.relative_to(server.sys_root)),
+					'path': str(match.relative_to(server.ftp_root)),
 					'flname': match.name
 				}
 
@@ -899,7 +902,7 @@ actions = md_actions(
 		'load_fullres_pic': 		pool_sys.load_fullres_pic,
 		'load_video_preview': 		pool_sys.load_video_preview,
 		# 'generate_vid_preview': 	pool_sys.generate_vid_preview,
-		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
+		# 'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
 		'generate_webm_preview':	pool_sys.ensure_webm_generation,
 		'get_webm':					pool_sys.get_webm,
 		'get_webm_audio':			pool_sys.get_webm_audio,

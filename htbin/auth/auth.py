@@ -15,12 +15,13 @@ class wfauth:
 		self.srv = srv
 		import base64
 		self.b64 = base64
-		from access_resolver import resolver
+		from .access_resolver import resolver
 		self.pth_auth = resolver
 
 		# in the new system guests are strictly limited
 		# and it's very important to know who's a guest and who's not
 		self.guest = True
+		self.isadmin = False
 
 		# it's none by default as some actions do not require the path resolve
 		# such as admin actions
@@ -64,7 +65,7 @@ class wfauth:
 	# evaluate a path request
 	def resolve_path(self, pth, wannawrite=False):
 		if self.user_rules == None:
-			self.user_rules = srv.jload(self.usr / 'rules.lzrd')
+			self.user_rules = self.srv.jload(self.usr_path / 'rules.lzrd')
 
 		decision = False
 		for rule in self.user_rules['target']:
@@ -72,21 +73,32 @@ class wfauth:
 
 		return decision
 
-	# get full databse record from userid
-	def get_user_info(seld, userid):
+	# get full database record from userid
+	# either by userid or auth_hash
+	def get_user_info(self, userid=None, auth_hash=None):
 		import sqlite3
 
 		connection = sqlite3.connect(str(self.srv.authdb_path / 'authsys' / 'users' / 'userdb.db'))
 		cursor_obj = connection.cursor()
 
-		cursor_obj.execute(f"""
-			SELECT
-				*
-			FROM
-				authdb
-			WHERE
-				userid = "{userid}";
-		""")
+		if auth_hash != None:
+			cursor_obj.execute(f"""
+				SELECT
+					*
+				FROM
+					authdb
+				WHERE
+					auth_hash = "{auth_hash}";
+			""")
+		else:
+			cursor_obj.execute(f"""
+				SELECT
+					*
+				FROM
+					authdb
+				WHERE
+					userid = "{userid}";
+			""")
 
 		infos = cursor_obj.fetchone()
 		connection.close()
@@ -112,11 +124,16 @@ class wfauth:
 	# and this function is responsible for validating that the provided userid can be used
 	# theoretically, if JWT is skipped, then anyone can access anyone's account by simply changing their userid
 	def jwt_auth(self):
-		provided_jwt = self.srv.prms.get('jwt')
+		provided_jwt = self.srv.headers.get('jwt')
 		# if userid (and therefore the rest of jwt) is not present, then auth the request with a default user
 		if provided_jwt == None:
 			self.guest = True
+			self.isadmin = False
 			self.userid = (self.srv.authdb_path / 'authsys' / 'cfg' / 'default_user').read_text()
+			details_path = self.srv.authdb_path / 'authsys' / 'details' / self.userid
+			self.usr_path = details_path
+			self.usr_info = self.srv.jload(details_path / 'info.lzrd')
+
 			self.srv.set_header('wafer-guest', 'yes')
 			return
 
@@ -130,7 +147,7 @@ class wfauth:
 			self.srv.flush(self.srv.json.dumps({
 				'error': 'malformed JWT token',
 				'details': str(jwtsplit)
-			}))
+			}).encode())
 			return
 
 		# get token from authsys and check if it matches the provided one
@@ -138,7 +155,7 @@ class wfauth:
 
 		# get user info, if any
 		# userinfo = self.get_user_info(self.userid)
-		details_path = self.srv.authdb_path / 'details' / self.userid
+		details_path = self.srv.authdb_path / 'authsys' / 'details' / userid
 
 		# if no user was found under specified id - reject the request
 		if not details_path.is_dir():
@@ -146,7 +163,7 @@ class wfauth:
 			self.srv.flush(self.srv.json.dumps({
 				'error': 'invalid_userid',
 				'details': 'User with the specified ID does not exist'
-			}))
+			}).encode())
 			return
 
 		# now validate the JWT token
@@ -157,14 +174,16 @@ class wfauth:
 			self.srv.flush(self.srv.json.dumps({
 				'error': 'invalid_jwt',
 				'details': 'The provided token does not match the user token from db'
-			}))
+			}).encode())
 			return
 
 		# if validation went fine, then set system variables for further actions
 		self.guest = False
-		self.userid = jwtsplit[0]
+		self.userid = userid
 		self.usr_path = details_path
 		self.usr_info = self.srv.jload(details_path / 'info.lzrd')
 		self.isadmin = self.usr_info['isadmin']
+
+		self.srv.set_header('wafer-admin', self.isadmin)
 
 		return True

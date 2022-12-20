@@ -56,7 +56,7 @@ class fjournal:
 		(self.jdb / f'{unreg_index}.jr').unlink(missing_ok=True)
 
 
-	# go trough every journal file...
+	# go through every journal file...
 	# todo: create prefixed type which says that every file with this prefix has to be deleted
 	def process_jr(self):
 		from datetime import datetime
@@ -65,9 +65,6 @@ class fjournal:
 			try:
 				# read file contents
 				jdata = jf.read_text().split('\n')
-				# delete object task immediately
-				# todo: does it actually makes sense to delete it immediately ?
-				jf.unlink(missing_ok=True)
 
 				# if the date is older than now - delete
 				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
@@ -75,6 +72,8 @@ class fjournal:
 				# delete target file
 				if fl_date < now_date:
 					Path(jdata[1]).unlink(missing_ok=True)
+					# delete the task
+					jf.unlink(missing_ok=True)
 			except Exception as e:
 				continue
 
@@ -84,6 +83,7 @@ class server:
 	def __init__(self, cgi, sys, cgitb):
 		# from util import giga_json
 		from pathlib import Path
+		import os
 		from server_config import server_config as svconf
 		import json, platform
 		import util
@@ -110,9 +110,19 @@ class server:
 			url_params[it] = ''.join(get_cgi_params[it])
 		self.prms = url_params
 
+		# parse http headers into a dict, if any
+		self.headers = {}
+		for hd in os.environ:
+			# print(hd, os.environ[hd], '\n')
+			if hd.startswith('HTTP_'):
+				self.headers[hd.replace('HTTP_', '').lower()] = os.environ[hd]
+
+
+
+
 		# read body content, if any
 		self.bin = b''
-		self.headers = {}
+		self.response_headers = {}
 		try:
 			self.bin = sys.stdin.buffer.read()
 		except:
@@ -144,8 +154,10 @@ class server:
 		self.authdb_path = Path(self.sv_cfg['authdb'])
 
 		# temp dir for temp files
-		self.tmp_dir = self.sysdb_path / 'temp_shite'
+		self.tmp_dir = self.sysdb_path / 'temps'
 
+		# important todo: this is only here to quickly mute a few errors
+		self.preview_db = self.sysdb_path / 'preview_queue'
 
 		# util functions from the util.py file
 		self.util = util
@@ -207,6 +219,10 @@ class server:
 			'hdr'
 		]
 
+
+		# self.flush()
+
+
 		#
 		# do auth
 		#
@@ -234,8 +250,18 @@ class server:
 		if add_b:
 			self.bin_write(add_b)
 		# add headers
-		for h in self.headers:
-			self.inp_sys.stdout.buffer.write(f'{h}: {self.headers[h]}\r\n')
+		for h in self.response_headers:
+			# try:
+			# 	hv = self.response_headers[h].encode()
+			# except:
+			# 	hv = str(self.response_headers[h]).encode()
+
+			# try:
+			# 	h = h.encode()
+			# except:
+			# 	h = str(h).encode()
+
+			self.inp_sys.stdout.buffer.write(f'{h}: {self.response_headers[h]}\r\n'.encode())
 		# content type
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
@@ -246,7 +272,7 @@ class server:
 		self.inp_sys.exit()
 
 	def set_header(self, hkey, hval):
-		self.headers[hkey] = hval
+		self.response_headers[hkey] = hval
 
 	# add to bin
 	# expects bytes

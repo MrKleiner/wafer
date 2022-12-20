@@ -36,7 +36,7 @@ class iguana
 			var start = 0;
 			var end = this.length - 1;
 			while (chars.indexOf(this[end]) >= 0) {
-				end -= 1;
+			end -= 1;
 			}
 			return this.substr(0, end + 1);
 		}
@@ -44,7 +44,7 @@ class iguana
 		String.prototype.lstrip = function(chars='') {
 			var start = 0;
 			while (chars.indexOf(x[start]) >= 0) {
-				start += 1;
+			start += 1;
 			}
 			var end = x.length - 1;
 			return x.substr(start);
@@ -52,59 +52,19 @@ class iguana
 
 		String.prototype.strip = function(chars='') {
 			var start = 0;
-			var trimmerd = this.trim()
-			while (chars.indexOf(trimmerd[start]) >= 0) {
-				start += 1;
+			while (chars.indexOf(this[start]) >= 0) {
+			start += 1;
 			}
-			var end = trimmerd.length - 1;
-			while (chars.indexOf(trimmerd[end]) >= 0) {
-				end -= 1;
+			var end = this.length - 1;
+			while (chars.indexOf(this[end]) >= 0) {
+			end -= 1;
 			}
-			return trimmerd.substr(start, end - start + 1);
+			return this.substr(start, end - start + 1);
 		}
 
-		//
-		// Other improvements
-		//
-
-		// clamp a number to min/max
-		Number.prototype.clamp = function(min, max) {
-			return Math.min(Math.max(this, min), max);
-		};
-
-		Math.isEven = function(numb){
-			return ((numb % 2) == 0)
-		};
-		Math.isOdd = function(numb){
-			return ((numb % 2) != 0)
-		};
-
-		// extend url
-		// (window.URL || window.webkitURL).prototype.target = function(first_argument) {
-
-		// };
-
-
-		const identifier = window.URL ? 'URL' : 'webkitURL'
-		class more_url extends (window.URL || window.webkitURL){
-			get target(){
-				const base = this.pathname.split('/')
-				var stem = base.at(-1).split('.')
-				stem.pop()
-				const sex = {
-					'name': base.at(-1) || null,
-					'suffix': base.at(-1).split('.').at(-1) || null,
-					'stem': stem.join('.') || null,
-					'stem_raw': base.at(-1).split('.')[0] || null
-				}
-				return sex
-			}
-			get no_search(){
-				return this.origin + this.pathname
-			}
-		}
-
-		window[identifier] = more_url
+		// Number.prototype.zfill = function(amt=1, char='0') {
+		// 	return num < 10 ? '0' + num : num;
+		// }
 
 
 		// python things
@@ -120,29 +80,7 @@ class iguana
 		}
 		window.str = str
 
-		function int(inp=null){
-			if (inp == null){
-				return {
-					from_bytes: function(bts){
-						const accepted = [
-							bts instanceof ArrayBuffer,
-							bts instanceof Uint8Array,
-							bts instanceof Uint16Array,
-							bts instanceof Uint32Array,
-							bts instanceof Uint8ClampedArray,
-							bts instanceof BigUint64Array,
-							bts instanceof Int8Array,
-							bts instanceof Int16Array,
-							bts instanceof Float32Array,
-							bts instanceof Float64Array,
-							bts instanceof BigInt64Array
-						];
-
-						return new Uint32Array(bts)[0]
-					}
-				}
-			}
-
+		function int(inp){
 			return parseInt(inp)
 		}
 		window.int = int
@@ -154,17 +92,11 @@ class iguana
 
 		function len(inp){
 			try {
-				if (this.isDict(inp)){
-					return Object.keys(inp).length
-				}
-			} catch (error) {}
-			try {
 				return inp.length
 			} catch (error) {
 				return str(inp).length
 			}
 		}
-		window.len = len
 
 		// python-like range()
 		function* range(start=0, stop=null, step=1)
@@ -200,50 +132,6 @@ class iguana
 		// Other useful extensions
 		//
 
-		window.localStorage.__proto__.getObject = function(itemname){
-			const got_item = window.localStorage.getItem(itemname)
-			try {
-				return JSON.parse(got_item)
-			} catch (error) {
-				return got_item
-			}
-		}
-		window.localStorage.__proto__.setObject = function(itemname, itemval){
-			try {
-				window.localStorage.setItem(itemname, JSON.stringify(itemval))
-			} catch (error) {
-				window.localStorage.setItem(itemname, itemval)
-			}
-		}
-
-
-		function compare_buffers(buff2){
-			if (this.byteLength != buf2.byteLength) return false;
-			var dv1 = new Int8Array(this);
-			var dv2 = new Int8Array(buf2);
-			for (var i = 0 ; i != this.byteLength ; i++){
-				if (dv1[i] != dv2[i]) return false;
-			}
-			return true;
-		}
-
-		ArrayBuffer.sameAs = compare_buffers;
-		Uint8Array.sameAs = compare_buffers;
-		Uint16Array.sameAs = compare_buffers;
-		Uint32Array.sameAs = compare_buffers;
-		Uint8ClampedArray.sameAs = compare_buffers;
-		BigUint64Array.sameAs = compare_buffers;
-		Int8Array.sameAs = compare_buffers;
-		Int16Array.sameAs = compare_buffers;
-		Float32Array.sameAs = compare_buffers;
-		Float64Array.sameAs = compare_buffers;
-		BigInt64Array.sameAs = compare_buffers;
-
-
-		//
-		// Other useful extensions
-		//
-
 		window.localStorage.__proto__.getObj = function(itemname){
 			const got_item = window.localStorage.getItem(itemname)
 			try {
@@ -264,13 +152,74 @@ class iguana
 	};
 
 	get info() {
-		return `Lizard's toybox. Version 0.38`
+		return `Lizard's toybox. Version 0.37`
 	};
 
 
-	isDict(v) {
-		return typeof v==='object' && v!==null && !(v instanceof Array) && !(v instanceof Date);
+	/*
+	get help() {
+		return {
+			'info': `Lizard's toybox. Version 0.32`,
+
+			'json_searcher': {
+				'description': `A set of useful functions to search thorugh json objects and find k:v pairs`,
+				'find_objects': `
+					//example of grabbing objects that match some key and value in JSON
+					console.log(find_objects(js,'ID','SGML'));
+					//returns 1 object where a key names ID has the value SGML
+
+					//example of grabbing objects that match some key in JSON
+					console.log(find_objects(js,'ID',''));
+					//returns 2 objects since keys with name ID are found in 2 objects
+
+					//example of grabbing obejcts that match some value in JSON
+					console.log(find_objects(js,'','SGML'));
+					//returns 2 object since 2 obects have keys with the value SGML
+
+					//example of grabbing objects that match some key in JSON
+					console.log(find_objects(js,'ID',''));
+					//returns 2 objects since keys with name ID are found in 2 objects
+				`,
+				'find_values': `
+					//example of grabbing values from any key passed in JSON
+					console.log(find_values(js,'ID'));
+					//returns array ["SGML", "44"]
+				`,
+				'find_keys': `
+					//example of grabbing keys by searching via values in JSON
+					console.log(find_keys(js,'SGML'));
+					//returns array ["ID", "SortAs", "Acronym", "str"] 
+				`
+			},
+
+			'Random String Generator (rndwave)': {
+				'description': 'Generate a random string of specified length.',
+				'len': `The length of the resulting string, can be 0. (default to 8)`,
+				'method': {
+					'def': `Default charset: A-Z,-,_ + additional characters, if any`,
+					'num': `A number + additional characters, if any`,
+					'flac': `Same as def, but with additional symbols`
+				}
+			},
+
+			'copytext': {
+				'description': 'Pass a string to copy it to buffer.'
+			},
+
+			'rgb2hex': {
+				'description': 'Convert RGB (128, 66, 111) to hex (#995757)'
+			},
+
+			'textdl': {
+				'description': 'Download a file of specified filename and text content',
+			}
+		}
 	}
+	*/
+
+
+
+
 
 
 
@@ -416,7 +365,7 @@ class iguana
 
 	// it's actually extremely fucking bad from technical point of view
 	// but it's fast enough to generate very long strings
-	// and then generate hash out of them
+	// and then generate hash our of them
 
 	// proper random shit
 	// methods: 
@@ -480,16 +429,9 @@ class iguana
 
 
 
-	// ============================================================
-	// ============================================================
-	//              Get a random number from in a range
-	// ============================================================
-	// ============================================================
 
-	// inclusive from both sides
-	rnd_interval(min, max) {
-		return Math.floor(Math.random() * (max - min + 1) + min)
-	}
+
+
 
 
 
@@ -643,6 +585,32 @@ class iguana
 		}
 		return '#' + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
 	}
+
+
+
+
+
+
+
+
+
+
+	// ============================================================
+	// ============================================================
+	//                            clamp
+	// ============================================================
+	// ============================================================
+
+	// clamp a number between two values
+	clamp(num=3, min=0, max=5) {
+	  return num <= min 
+	    ? min 
+	    : num >= max 
+	      ? max 
+	      : num
+	}
+
+
 
 
 
@@ -889,16 +857,14 @@ class iguana
 
 	}
 
-	// advanced string encoding
-	// (basically fixed native atob/btoa)
 	btoa(st=''){
 		if (st==''){return ''}
-		return this.base64EncArr(this.strToUTF8Arr(st))
+		return base64EncArr(this.strToUTF8Arr(st))
 	}
 
 	atob(st=''){
 		if (st==''){return ''}
-		return this.UTF8ArrToStr(this.base64DecToArr(st))
+		return UTF8ArrToStr(this.base64DecToArr(st))
 	}
 
 
@@ -989,7 +955,7 @@ class iguana
 
 	// ============================================================
 	// ============================================================
-	//       		await for an element on a page...
+	//       		await for an element of a page...
 	// ============================================================
 	// ============================================================
 
@@ -997,7 +963,7 @@ class iguana
 	// and a name
 	wait_elem(sel=null, identify=null)
 	{
-		if (!sel){return false}
+		if (sel == null){return false}
 		var thy = this;
 		const save_sel = sel;
 		var me = identify || this.rndwave(32, 'def').replaceAll('-', '').replaceAll('_', '')
@@ -1059,9 +1025,16 @@ class iguana
 
 
 
+
+
+
+
+
+
+
 	// ============================================================
 	// ============================================================
-	// 	          Delete every nth character from a string
+	// 	          Delete nth character from a string
 	// ============================================================
 	// ============================================================
 
@@ -1070,7 +1043,7 @@ class iguana
 	// use - if set to true, will return every n character
 	// if set to false or not set, will return a string with every n character deleted
 	// smartass: Works with arrays too
-	delnthchar(st, nth, use=false)
+	delnthchar(st, nth, use)
 	{
 		if (st.toString() == ''){ return ''}
 
@@ -1181,6 +1154,65 @@ class iguana
 		return imageUrl
 	}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// ============================================================
+	// ============================================================
+	//                            Other
+	// ============================================================
+	// ============================================================
+
+
+	// load user script
+	// specify what script to load
+	// (link to .js)
+	// beware of gayshit CORS policy.
+	/*
+	function load_dasboat(uscript)
+	{
+		// $('body').append('<div>loaded shit</div>')
+		function success()
+		{
+			// var $ = window.jQuery;
+			console.log('liz3_loaded_userscript');
+			// $('body').append('<div>loaded shit</div>');
+		}
+		var startingTime = new Date().getTime();
+		// Load the script
+		var script = document.createElement('SCRIPT');
+		script.src = uscript;
+		script.type = 'text/javascript';
+		script.onload = function() {
+			// var $ = window.jQuery;
+			$(function() {
+				var endingTime = new Date().getTime();
+				var tookTime = endingTime - startingTime;
+				console.log('l3UScript loaded in ' + tookTime + ' milliseconds');
+				// $('body').append('<div>loaded shit</div>')
+			});
+		};
+		document.getElementsByTagName('head')[0].appendChild(script);
+	}
+	*/
 
 
 }

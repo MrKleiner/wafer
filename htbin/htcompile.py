@@ -5,7 +5,7 @@ def compile_server():
 	import py_compile, shutil
 	from pathlib import Path
 
-	thisdir = Path(__file__).parents[1]
+	thisdir = Path(__file__).absolute().parents[1]
 
 	if (thisdir / 'htbin_c').is_dir():
 		shutil.rmtree(str(thisdir / 'htbin_c'))
