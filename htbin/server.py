@@ -176,6 +176,7 @@ class server:
 
 		self.allowed_vid = [
 			'mp4',
+			# IMPORTANT: RECHECK
 			'mov',
 			'webm',
 			'ts',
