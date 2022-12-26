@@ -66,7 +66,6 @@ window.print = console.log;
 
 const obj_url = (window.URL || window.webkitURL);
 
-const htbin = 'htbin_c'
 
 //
 // applicable formats
@@ -667,24 +666,20 @@ window.bootlegger.core.py_get = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
-	const rq_headers = {
-		'accept': '*/*',
-		'cache-control': 'no-cache',
-		'pragma': 'no-cache'
-	}
-
-	const add_jwt = window.localStorage.getItem('auth_token')
-	if (add_jwt){
-		rq_headers['jwt'] = add_jwt
-	}
+	// add auth token to the request
+	prms['auth'] = window.localStorage.getItem('auth_token') || 'ftp';
 
 	// convert payload to URL params
 	const urlParams = new URLSearchParams(prms);
 
 	// exec...
 	return new Promise(function(resolve, reject){
-		fetch(`${htbin}/${mod}.pyc?${urlParams.toString()}`, {
-			'headers': rq_headers,
+		fetch(`htbin/${mod}.py?${urlParams.toString()}`, {
+			'headers': {
+				'accept': '*/*',
+				'cache-control': 'no-cache',
+				'pragma': 'no-cache'
+			},
 			'method': 'GET',
 			'mode': 'cors',
 			'credentials': 'omit'
@@ -743,18 +738,8 @@ window.bootlegger.core.py_get = async function(mod='', prms={}, load_as='text')
 // as: treat response as text/json/buffer
 window.bootlegger.core.py_send = async function(mod='', prms={}, payload='', load_as='text')
 {
-	const rq_headers = {
-		'accept': '*/*',
-		'cache-control': 'no-cache',
-		'pragma': 'no-cache'
-	}
-
-	const add_jwt = window.localStorage.getItem('auth_token')
-	if (add_jwt){
-		rq_headers['jwt'] = add_jwt
-	}
-	
-	// prms['auth'] = window.localStorage.getItem('auth_token') || 'ftp';
+	// add auth token to the payload
+	prms['auth'] = window.localStorage.getItem('auth_token') || 'ftp';
 
 	// convert params to URL params
 	const urlParams = new URLSearchParams(prms);
@@ -764,8 +749,12 @@ window.bootlegger.core.py_send = async function(mod='', prms={}, payload='', loa
 
 	// exec...
 	return new Promise(function(resolve, reject){
-		fetch(`${htbin}/${mod}.pyc?${urlParams.toString()}`, {
-			'headers': rq_headers,
+		fetch(`htbin/${mod}.py?${urlParams.toString()}`, {
+			'headers': {
+				'accept': '*/*',
+				'cache-control': 'no-cache',
+				'pragma': 'no-cache'
+			},
 			'method': 'POST',
 			'body': pl,
 			'mode': 'cors',

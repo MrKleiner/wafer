@@ -4,6 +4,8 @@ from server import server, md_actions
 server = server(cgi, sys, cgitb)
 
 
+# File imports
+import asyncio
 
 
 
@@ -11,23 +13,18 @@ server = server(cgi, sys, cgitb)
 # only has a few functions, but still it's better to have it as a separate class
 class media_gen:
 	def __init__(self):
-		# todo: this is literally useless
-		# except magix
-		self.ffmpeg = server.Path(server.sv_cfg['ffmpeg'].strip())
-		self.ffprobe = server.Path(server.sv_cfg['ffprobe'].strip())
-		
-
+		self.dd = 'dd'
 
 
 	# get video info with ffprobe
-	# takes video path and {stream=}WHATEVER(nb_read_frames,width,height)
+	# takes  video path and {stream=}WHATEVER(nb_read_frames,width,height)
 	def get_video_stats(self, video_path=None, infos='width,height'):
 		import json
 		import subprocess as sp
 
 		# ffprobe params
 		ffprobe_prms = [
-			str(self.ffprobe),
+			'/usr/bin/ffprobe',
 			'-v', 'error',
 			'-select_streams', 'v:0',
 			'-count_frames',
@@ -47,7 +44,7 @@ class media_gen:
 
 	# this is the only obvious way of doing this
 	# aka calling this from js and not waiting for it to return anything
-	# todo: store these previews in a shared database where file name is sha256 of a video OR its path
+	# important todo: store these previews in a shared database where file name is sha256 of a video OR its path
 	# to avoid duplicate previews
 	# it'd also be important to have controls like re-generating/deleting a preview
 	# takes absolute path to the video as an input
@@ -88,7 +85,7 @@ class media_gen:
 		# create ffmpeg params
 		ffmpeg_prms = [
 			# ffmpeg executable
-			str(self.ffmpeg),
+			'/usr/bin/ffmpeg',
 
 			# automatically discard if file exists
 			'-n',
@@ -128,7 +125,7 @@ class media_gen:
 		# ffmpeg -i video.mp4 -f mp3 -ab 192000 -vn music.mp3
 		audio_prms = [
 			# ffmpeg executable
-			str(self.ffmpeg),
+			'/usr/bin/ffmpeg',
 
 			# automatically discard if file exists
 			'-n',
@@ -304,7 +301,7 @@ class media_gen:
 		# it's very important to note that ffmpeg frame extraction count starts at 1 and NOT 0
 		ffmpeg_prms = [
 			# ffmpeg executable
-			str(self.ffmpeg),
+			'/usr/bin/ffmpeg',
 
 			# automatically overwrite if file exists already
 			'-y',
@@ -412,66 +409,7 @@ class media_gen:
 		shutil.move(str(chad_location), str(newloc))
 
 
-	# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
-	# generate a lowres preview of a static image
-	def generate_pic_preview(self, img_path=None):
-		import subprocess as sp
-		from pathlib import Path
 
-		img_path = Path(img_path)
-		if not img_path.is_file():
-			raise Exception('generate_pic_preview: image does not exist under the specified file path')
-
-		# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
-		ffmpeg_prms = [
-			# mpeg
-			'/usr/bin/ffmpeg',
-			# input
-			# '-i', str(engines / pl['img']),
-			'-i', str(img_path),
-			# resize
-			# '-hwaccel', 'cuda',
-			# '-hwaccel_output_format', 'cuda',
-			# '--enable-nvenc',
-			# '--enable-ffnvcodec',
-			# '-h', 'encoder=h264_nvenc',
-			# does nothing
-			# (it works, but it's only for videos)
-			# '-vcodec', 'h264_nvenc',
-			# change size
-			# this will upscale sometimes
-			# '-vf', 'scale=500:-1',
-			# while this is smart
-			# this is quite a hires preview
-			# '-vf', 'scale=w=min(iw\\,500):h=-2',
-			# this one is smaller
-			'-vf', 'scale=w=min(iw\\,300):h=-2',
-			# format
-			'-c:v', 'webp',
-			# ffmpeg encoding type
-			'-f', 'image2pipe',
-			# lossless
-			# quite a heavy load
-			# '-lossless', '1',
-			# make it take even less space
-			'-lossless', '0',
-			# lossless compression
-			# (now is lossy)
-			'-compression_level', '6',
-			'-qscale', '40',
-			# output to stdout
-			'pipe:'
-			# 'fuckoff.webp'
-			# str(tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
-		]
-
-		# webp = subprocess.run(ffmpeg_prms, capture_output=True)
-		webp = None
-		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
-			# myFile.write(img_pipe.stdout.read())
-			webp = img_pipe.stdout.read()
-
-		return webp
 
 
 
@@ -480,7 +418,6 @@ class mqueue:
 	def __init__(self):
 
 		# init the mediagen class
-		# (that class is a set of functions which generate actual previews n shit)
 		self.mgen = media_gen()
 
 		# store possible actions
@@ -490,10 +427,7 @@ class mqueue:
 		}
 
 		# shortcut to the queue folder
-		self.qdb = server.sysdb_path / 'preview_queue'
-
-		# ensure that the preview queue folder exists
-		self.qdb.mkdir(exist_ok=True)
+		self.qdb = server.preview_db / 'preview_queue'
 
 	# this writes an error log to a file
 	def errlog_exc(self, err):
@@ -650,40 +584,71 @@ class poolsys:
 		self.mediaq = mqueue()
 
 
-	def list_dir(self):
+
+	def list_leagues(self):
+		import json
+
+		server.bin_jwrite([fld.name for fld in server.sys_root.glob('*') if fld.is_dir()])
+		# server.bin_write(str(server.sys_root).encode())
+		server.flush()
+
+
+	def list_matches_w_subroot(self):
+		import json
+
+		mws = {}
+		for cmd in server.sys_root.glob('*'):
+			if not cmd.is_dir():
+				continue
+			mws[cmd.name] = [match.name for match in cmd.glob('*') if match.is_dir()]
+
+		server.bin_jwrite(mws)
+		server.flush()
+
+
+
+	def list_league_matches(self):
+		import json
+		from pathlib import Path
+
+		if not server.prms['league_name']:
+			return []
+
+		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['league_name'])).glob('*') if fld.is_dir()])
+		server.flush()
+
+
+
+	def list_match_struct(self):
+		import json
+		from pathlib import Path
+
+		server.bin_jwrite([fld.name for fld in (server.sys_root / Path(server.prms['match_name'])).glob('*') if fld.is_dir()])
+		server.flush()
+
+
+	def list_media(self):
 		import json, os
-		# todo: server already has pathlib
 		from pathlib import Path
 
 		matches = []
-
-		for match in (server.ftp_root / Path(server.prms['target'])).glob('*'):
-
-			# admins are allowed to view anything
-			if not server.wfauth.resolve_path(match) and not server.wfauth.isadmin:
+		# todo: continue statements were cool
+		for match in (server.sys_root / Path(server.prms['target'])).glob('*'):
+			if match.is_dir():
 				continue
 
-			if not match.is_dir():
-				fl_info = {
-					'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
-					'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
-					'etype': 'file',
-					'path': str(match.relative_to(server.ftp_root)),
-					'flname': match.name
-				}
+			fl_info = {
+				'lfs': (True if os.stat(str(match)).st_size >= ((1024**2)*3) else False),
+				'stats': f"""{((1024**2)*3)}/{os.stat(str(match)).st_size}""",
+				'etype': 'file',
+				'path': str(match.relative_to(server.sys_root)),
+				'flname': match.name
+			}
 
-				if match.suffix.strip('.').lower() in server.allowed_vid:
-					fl_info['etype'] = 'vid'
-				if match.suffix.strip('.').lower() in server.allowed_img:
-					fl_info['etype'] = 'img'
-			else:
-				fl_info = {
-					'lfs': False,
-					'stats': '0/0',
-					'etype': 'dir',
-					'dirname': match.name
-				}
-
+			if match.suffix.strip('.').lower() in server.allowed_vid:
+				fl_info['etype'] = 'vid'
+			if match.suffix.strip('.').lower() in server.allowed_img:
+				fl_info['etype'] = 'img'
 
 			matches.append(fl_info)
 
@@ -691,6 +656,68 @@ class poolsys:
 		server.bin_jwrite(matches)
 		server.flush()
 
+
+
+	# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
+	# generate a lowres preview of a static image
+	def generate_pic_preview(self, img_path=None):
+		import subprocess as sp
+		from pathlib import Path
+
+		img_path = Path(img_path)
+		if not img_path.is_file():
+			raise Exception('generate_pic_preview: image does not exist under the specified file path')
+
+		# important todo: https://trac.ffmpeg.org/wiki/Encode/VP9
+		ffmpeg_prms = [
+			# mpeg
+			'/usr/bin/ffmpeg',
+			# input
+			# '-i', str(engines / pl['img']),
+			'-i', str(img_path),
+			# resize
+			# '-hwaccel', 'cuda',
+			# '-hwaccel_output_format', 'cuda',
+			# '--enable-nvenc',
+			# '--enable-ffnvcodec',
+			# '-h', 'encoder=h264_nvenc',
+			# does nothing
+			# (it works, but it's only for videos)
+			# '-vcodec', 'h264_nvenc',
+			# change size
+			# this will upscale sometimes
+			# '-vf', 'scale=500:-1',
+			# while this is smart
+			# this is quite a hires preview
+			# '-vf', 'scale=w=min(iw\\,500):h=-2',
+			# this one is smaller
+			'-vf', 'scale=w=min(iw\\,400):h=-2',
+			# format
+			'-c:v', 'webp',
+			# ffmpeg encoding type
+			'-f', 'image2pipe',
+			# lossless
+			# quite a heavy load
+			# '-lossless', '1',
+			# make it take even less space
+			'-lossless', '0',
+			# lossless compression
+			# (now is lossy)
+			'-compression_level', '6',
+			'-qscale', '50',
+			# output to stdout
+			'pipe:'
+			# 'fuckoff.webp'
+			# str(tgt_path.parent / 'prdb_lzpreviews' / f'{tgt_path.name}.lzpreview.webp')
+		]
+
+		# webp = subprocess.run(ffmpeg_prms, capture_output=True)
+		webp = None
+		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as img_pipe:
+			# myFile.write(img_pipe.stdout.read())
+			webp = img_pipe.stdout.read()
+
+		return webp
 
 	# basically an image preview gateway
 	def load_image_preview(self):
@@ -713,7 +740,7 @@ class poolsys:
 		(tgt_path.parent / 'prdb_lzpreviews').mkdir(exist_ok=True)
 
 		# generate the preview
-		webp = self.mgen.generate_pic_preview(tgt_path)
+		webp = self.generate_pic_preview(tgt_path)
 
 		# Save preview to the preview folder
 		preview_path.write_bytes(webp)
@@ -897,12 +924,15 @@ pool_sys = poolsys()
 actions = md_actions(
 	server,
 	{
-		'list_dir': 				pool_sys.list_dir,
+		'list_leagues': 			pool_sys.list_leagues,
+		'list_league_matches': 		pool_sys.list_league_matches,
+		'list_match_struct': 		pool_sys.list_match_struct,
+		'list_media': 				pool_sys.list_media,
 		'load_image_preview': 		pool_sys.load_image_preview,
 		'load_fullres_pic': 		pool_sys.load_fullres_pic,
 		'load_video_preview': 		pool_sys.load_video_preview,
 		# 'generate_vid_preview': 	pool_sys.generate_vid_preview,
-		# 'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
+		'list_matches_w_subroot':	pool_sys.list_matches_w_subroot,
 		'generate_webm_preview':	pool_sys.ensure_webm_generation,
 		'get_webm':					pool_sys.get_webm,
 		'get_webm_audio':			pool_sys.get_webm_audio,

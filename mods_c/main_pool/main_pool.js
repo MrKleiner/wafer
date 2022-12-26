@@ -37,17 +37,11 @@ window.bootlegger.main_pool.set_flist_view_type = function(tp='list', shadow=fal
 window.bootlegger.main_pool.module_loader = async function()
 {
 	print('start loading mpool')
-	// load the html of the panel
 	await window.bootlegger.core.sysloader('main_pool', true);
-	// set view type (grid | list) with default fallback to list
 	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type') || 'list')
-	// if there are any unfinished transfers left - this function will show them
 	window.bootlegger.main_pool.restore_protocol()
-	// await window.bootlegger.main_pool.load_root_dir(false)
-	// await window.bootlegger.main_pool.go_dir_path()
-
-	// list the root dir of the FTP
-	await window.bootlegger.main_pool.list_dir('.')
+	await window.bootlegger.main_pool.load_root_dir(false)
+	await window.bootlegger.main_pool.go_dir_path()
 }
 
 // get path from the url and go there on page load 
@@ -89,25 +83,137 @@ window.bootlegger.main_pool.await_img_load = function(imgsrc)
 // 						Navigation
 // ==================================================
 
-// list the requested directory
-window.bootlegger.main_pool.list_dir = async function(path='.')
+// load the root directory of the entire FTP
+window.bootlegger.main_pool.load_root_dir = async function(doup=true)
 {
-	$('mpool flist').empty();
 	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool load root dir')
 	window.bootlegger.main_pool.media_units_iteration.kill()
-
-	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_get(
+	// list root shite
+	const roots = await window.bootlegger.core.py_get(
 		'poolsys/poolsys',
 		{
-			'action': 'list_dir',
-			'target': path
+			'action': 'list_leagues'
+		},
+		'json'
+	)
+	print('mpool loaded root dir')
+
+	print('fuck this shit', roots)
+	doup ? window.bootlegger.main_pool.update_vis_path() : null
+	// window.bootlegger.main_pool.update_vis_path()
+
+	$('mpool flist').empty();
+	// window.bootlegger.main_pool.set_flist_view_type('list');
+	// spawn shite
+	for (var entry of roots){
+		$('mpool flist').append(`
+			<flist-entry class="folder league" fldname="${entry}">
+				<etype folder>
+				</etype>
+				<ename>${entry}</ename>
+			</flist-entry>
+		`)
+	}
+}
+
+// list subroot directories
+window.bootlegger.main_pool.list_league_matches = async function(elm='')
+{
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
+	window.bootlegger.main_pool.media_units_iteration.kill()
+	print('mpool list matches')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
+
+	window.league = fld_name;
+	window.bootlegger.main_pool.update_vis_path()
+
+
+	const full_root = (await window.bootlegger.core.load_dbfile('root.json', 'json'))['root_path']
+
+	const subroot_flds = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'list_league_matches',
+			'league_name': fld_name
 		},
 		'json'
 	)
 
-	print(window.bootlegger.main_pool.dirlisting)
+	$('mpool flist').empty();
+	// window.bootlegger.main_pool.set_flist_view_type('list');
+
+	// spawn shite
+	for (var entry of subroot_flds){
+		$('mpool flist').append(`
+			<flist-entry class="folder match" fldpath="${entry}">
+				<etype folder>
+				</etype>
+				<ename>${entry}</ename>
+			</flist-entry>
+		`)
+	}
+	// now prepend go up
+	$('mpool flist').prepend(`
+		<flist-entry class="folder" onclick="window.league = null; window.bootlegger.main_pool.load_root_dir()">
+			<etype folder>
+			</etype>
+			<ename>../</ename>
+		</flist-entry>
+	`)
+
 }
+
+// list dirs of the subroot dir
+window.bootlegger.main_pool.list_match_struct = async function(elm='')
+{
+	window.bootlegger.main_pool.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
+	print('mpool list match struct')
+	// important todo: as was mentioned below this should be a system
+	// and not just some random shit
+	// update: this is SOME sort of system, but still not what we need
+	window.bootlegger.main_pool.media_units_iteration.kill()
+	window.bootlegger.main_pool.dirlisting = [];
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
+
+	window.league_match = fld_name;
+	window.bootlegger.main_pool.update_vis_path()
+
+	const dirlisting = await window.bootlegger.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'list_match_struct',
+			'match_name': `${window.league}/${window.league_match}`
+		},
+		'json'
+	)
+
+	print('listed match:', dirlisting)
+
+	$('mpool flist').empty();
+	// window.bootlegger.main_pool.set_flist_view_type('list');
+
+	for (var lst of dirlisting){
+		$('mpool flist').append(`
+			<flist-entry class="folder struct_entry" fldpath="${lst}">
+				<etype folder>
+				</etype>
+				<ename>${lst}</ename>
+			</flist-entry>
+		`)
+	}
+
+	// now prepend go up
+	$('mpool flist').prepend(`
+		<flist-entry fldname="${window.league}" class="folder" onclick="window.league_match = null; window.bootlegger.main_pool.list_league_matches(this)">
+			<etype folder>
+			</etype>
+			<ename>../</ename>
+		</flist-entry>
+	`)
+}
+
+
 
 
 

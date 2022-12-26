@@ -1,28 +1,13 @@
 
-# Documentation
-# 
-
-
-
-
-
-
-
-
-
-
 
 
 class fjournal:
 	"""a file watcher"""
-	# srv = server variable
 	def __init__(self, srv):
 		from pathlib import Path
 		self.Path = Path
-		self.jdb = srv.sysdb_path / 'journal'
+		self.jdb = srv.preview_db / 'journal'
 		self.srv = srv
-		# ensure that the journal folder exists
-		self.jdb.mkdir(exist_ok=True)
 
 	# takes the path to the file and the life length
 	# life in hours
@@ -56,7 +41,7 @@ class fjournal:
 		(self.jdb / f'{unreg_index}.jr').unlink(missing_ok=True)
 
 
-	# go through every journal file...
+	# go trough every journal file...
 	# todo: create prefixed type which says that every file with this prefix has to be deleted
 	def process_jr(self):
 		from datetime import datetime
@@ -65,6 +50,9 @@ class fjournal:
 			try:
 				# read file contents
 				jdata = jf.read_text().split('\n')
+				# delete object task immediately
+				# todo: does it actually makes sense to delete it immediately ?
+				jf.unlink(missing_ok=True)
 
 				# if the date is older than now - delete
 				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
@@ -72,29 +60,35 @@ class fjournal:
 				# delete target file
 				if fl_date < now_date:
 					Path(jdata[1]).unlink(missing_ok=True)
-					# delete the task
-					jf.unlink(missing_ok=True)
 			except Exception as e:
 				continue
 
 
+class server_logpswd_db:
+	def __init__(self, obj, db_path):
+		self.db = obj
+		self.path = db_path
+
+class server_allowance_db:
+	def __init__(self, obj, db_path):
+		self.db = obj
+		self.path = db_path
+
+
+
 class server:
-	"""All the stuff passed to the server + server config"""
+	"""All the stuff passed to server + server config"""
 	def __init__(self, cgi, sys, cgitb):
 		# from util import giga_json
 		from pathlib import Path
-		import os
-		from server_config import server_config as svconf
-		import json, platform
+		import json
 		import util
-		from auth.auth import wfauth
 
 		# traceback messages
 		cgitb.enable()
 
 		# don't append modules many times...
 		self.Pathl = Path
-		self.Path = Path
 		self.json = json
 
 		# input sys module
@@ -110,19 +104,8 @@ class server:
 			url_params[it] = ''.join(get_cgi_params[it])
 		self.prms = url_params
 
-		# parse http headers into a dict, if any
-		self.headers = {}
-		for hd in os.environ:
-			# print(hd, os.environ[hd], '\n')
-			if hd.startswith('HTTP_'):
-				self.headers[hd.replace('HTTP_', '').lower()] = os.environ[hd]
-
-
-
-
 		# read body content, if any
 		self.bin = b''
-		self.response_headers = {}
 		try:
 			self.bin = sys.stdin.buffer.read()
 		except:
@@ -134,58 +117,42 @@ class server:
 				self.server_root = pr
 				break
 
-		# todo: just don't bother and distribute two separate versions for linux and for windows
-		self.platform = platform.system().lower()
-
 		# raw server config
-		# self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
-		self.sv_cfg = svconf
+		self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
+
+		# system db with other folders, like previews and temp shit
+		self.preview_db = Path(self.sv_cfg['preview_db'])
 
 		# system root, aka root of the file pool
-		# important todo: better name it ftp_root
-		# self.sys_root = Path(self.sv_cfg['system_root'])
-		self.ftp_root = Path(self.sv_cfg['system_root'])
-
-		# util db, like temp files and media previews
-		# preview_db
-		self.sysdb_path = Path(self.sv_cfg['sysdb'])
-
-		# auth db path
-		self.authdb_path = Path(self.sv_cfg['authdb'])
+		self.sys_root = Path(self.sv_cfg['system_root'])
 
 		# temp dir for temp files
-		self.tmp_dir = self.sysdb_path / 'temps'
+		self.tmp_dir = self.preview_db / 'temp_shite'
 
-		# important todo: this is only here to quickly mute a few errors
-		self.preview_db = self.sysdb_path / 'preview_queue'
-
-		# util functions from the util.py file
+		# self.user_token = self.auth_db.get(url_params.get('auth'))
 		self.util = util
 
+		#
+		# Ensure that all the system folders exist
+		#
+
+		# important todo: is it bad to do this on each request ?
+		(self.preview_db / 'temp_shite').mkdir(exist_ok=True)
+		(self.preview_db / 'journal').mkdir(exist_ok=True)
+		(self.preview_db / 'preview_queue').mkdir(exist_ok=True)
 
 		#
 		# applicable file formats
 		#
 
-		# important todo: this has to be configurable
-		# it's not a problem performance wise (declaring 2 vars takes like 0 milliseconds)
-		# but it has to be configurable from the control panel
-
-		# one important excuse of this being hardcoded is that some file formats are not supported by ffmpeg
-		# but are supported by image magick
-
 		self.allowed_vid = [
 			'mp4',
-			# IMPORTANT: RECHECK
 			'mov',
 			'webm',
 			'ts',
 			'mts',
 			'mkv',
-			'avi',
-			'mpeg',
-			'ogv',
-			'3gp'
+			'avi'
 		]
 
 		self.allowed_img = [
@@ -211,7 +178,6 @@ class server:
 			'hdr'
 		]
 
-		# special means ffmpeg cannot deal with it
 		self.allowed_img_special = [
 			'tga',
 			'psd',
@@ -219,15 +185,6 @@ class server:
 			'raw',
 			'hdr'
 		]
-
-
-		# self.flush()
-
-
-		#
-		# do auth
-		#
-		self.wfauth = wfauth(self)
 
 
 	# journal which keeps track of files to delete
@@ -250,20 +207,7 @@ class server:
 	def flush(self, add_b=None):
 		if add_b:
 			self.bin_write(add_b)
-		# add headers
-		for h in self.response_headers:
-			# try:
-			# 	hv = self.response_headers[h].encode()
-			# except:
-			# 	hv = str(self.response_headers[h]).encode()
-
-			# try:
-			# 	h = h.encode()
-			# except:
-			# 	h = str(h).encode()
-
-			self.inp_sys.stdout.buffer.write(f'{h}: {self.response_headers[h]}\r\n'.encode())
-		# content type
+		# general info
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
 		self.inp_sys.stdout.buffer.write(self.sv_buffer)
@@ -272,8 +216,6 @@ class server:
 		self.inp_sys.stdout.flush()
 		self.inp_sys.exit()
 
-	def set_header(self, hkey, hval):
-		self.response_headers[hkey] = hval
 
 	# add to bin
 	# expects bytes
@@ -299,11 +241,6 @@ class server:
 		if not floc.is_file():
 			raise Exception('x_files transfer: file path does not exist')
 
-		# src from hello.py:
-		# sys.stdout.write(b'Content-Type: application/octet-stream\r\n')
-		# sys.stdout.write(b'Content-Disposition: attachment; filename="bigfile.mp4"\r\n')
-		# sys.stdout.write(b'X-Sendfile: /home/basket/scottish_handshake/db/20181225_182650.ts\r\n\r\n')
-
 		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n'.encode())
 		self.inp_sys.stdout.buffer.write(f"""Content-Disposition: attachment; filename="{str(flname)}"\r\n""".encode())
 		self.inp_sys.stdout.buffer.write(f"""X-Sendfile: {str(floc)}\r\n\r\n""".encode())
@@ -313,10 +250,21 @@ class server:
 		self.inp_sys.exit()
 
 
-	# it shouldn't be here, but it's here because of performance reasons
-	# loads json from a path
-	def jload(self, pth):
-		return self.json.loads(self.Path(pth).read_bytes())
+	# login,password,token database
+	@property
+	def auth_db(self):
+		db_pt = self.Pathl(self.sv_cfg['auth_db_loc'])
+		db_obj = self.json.loads(db_pt.read_bytes())
+		return server_logpswd_db(db_obj, db_pt)
+
+	# allowance, like admin and modules
+	@property
+	def alw_db(self):
+		db_pt = self.Pathl(self.sv_cfg['clearance_db'])
+		db_obj = self.json.loads(db_pt.read_bytes())
+		return server_allowance_db(db_obj, db_pt)
+
+
 
 
 
@@ -334,7 +282,6 @@ class md_actions:
 		else:
 			self.srv.bin_write('invalid action'.encode())
 			self.srv.flush()
-
 
 
 

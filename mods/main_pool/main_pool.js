@@ -33,17 +33,11 @@ $this.set_flist_view_type = function(tp='list', shadow=false)
 $this.module_loader = async function()
 {
 	print('start loading mpool')
-	// load the html of the panel
 	await $all.core.sysloader('main_pool', true);
-	// set view type (grid | list) with default fallback to list
-	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type') || 'list')
-	// if there are any unfinished transfers left - this function will show them
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'))
 	$this.restore_protocol()
-	// await $this.load_root_dir(false)
-	// await $this.go_dir_path()
-
-	// list the root dir of the FTP
-	await $this.list_dir('.')
+	await $this.load_root_dir(false)
+	await $this.go_dir_path()
 }
 
 // get path from the url and go there on page load 
@@ -85,25 +79,137 @@ $this.await_img_load = function(imgsrc)
 // 						Navigation
 // ==================================================
 
-// list the requested directory
-$this.list_dir = async function(path='.')
+// load the root directory of the entire FTP
+$this.load_root_dir = async function(doup=true)
 {
-	$('mpool flist').empty();
 	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
 	print('mpool load root dir')
 	$this.media_units_iteration.kill()
-
-	$this.dirlisting = await $all.core.py_get(
+	// list root shite
+	const roots = await $all.core.py_get(
 		'poolsys/poolsys',
 		{
-			'action': 'list_dir',
-			'target': path
+			'action': 'list_leagues'
+		},
+		'json'
+	)
+	print('mpool loaded root dir')
+
+	print('fuck this shit', roots)
+	doup ? $this.update_vis_path() : null
+	// $this.update_vis_path()
+
+	$('mpool flist').empty();
+	// $this.set_flist_view_type('list');
+	// spawn shite
+	for (var entry of roots){
+		$('mpool flist').append(`
+			<flist-entry class="folder league" fldname="${entry}">
+				<etype folder>
+				</etype>
+				<ename>${entry}</ename>
+			</flist-entry>
+		`)
+	}
+}
+
+// list subroot directories
+$this.list_league_matches = async function(elm='')
+{
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
+	$this.media_units_iteration.kill()
+	print('mpool list matches')
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldname') : elm;
+
+	window.league = fld_name;
+	$this.update_vis_path()
+
+
+	const full_root = (await $all.core.load_dbfile('root.json', 'json'))['root_path']
+
+	const subroot_flds = await $all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'list_league_matches',
+			'league_name': fld_name
 		},
 		'json'
 	)
 
-	print($this.dirlisting)
+	$('mpool flist').empty();
+	// $this.set_flist_view_type('list');
+
+	// spawn shite
+	for (var entry of subroot_flds){
+		$('mpool flist').append(`
+			<flist-entry class="folder match" fldpath="${entry}">
+				<etype folder>
+				</etype>
+				<ename>${entry}</ename>
+			</flist-entry>
+		`)
+	}
+	// now prepend go up
+	$('mpool flist').prepend(`
+		<flist-entry class="folder" onclick="window.league = null; $this.load_root_dir()">
+			<etype folder>
+			</etype>
+			<ename>../</ename>
+		</flist-entry>
+	`)
+
 }
+
+// list dirs of the subroot dir
+$this.list_match_struct = async function(elm='')
+{
+	$this.set_flist_view_type(window.localStorage.getItem('flist_view_type'), true)
+	print('mpool list match struct')
+	// important todo: as was mentioned below this should be a system
+	// and not just some random shit
+	// update: this is SOME sort of system, but still not what we need
+	$this.media_units_iteration.kill()
+	$this.dirlisting = [];
+	const fld_name = elm.getAttribute ? elm.getAttribute('fldpath') : elm;
+
+	window.league_match = fld_name;
+	$this.update_vis_path()
+
+	const dirlisting = await $all.core.py_get(
+		'poolsys/poolsys',
+		{
+			'action': 'list_match_struct',
+			'match_name': `${window.league}/${window.league_match}`
+		},
+		'json'
+	)
+
+	print('listed match:', dirlisting)
+
+	$('mpool flist').empty();
+	// $this.set_flist_view_type('list');
+
+	for (var lst of dirlisting){
+		$('mpool flist').append(`
+			<flist-entry class="folder struct_entry" fldpath="${lst}">
+				<etype folder>
+				</etype>
+				<ename>${lst}</ename>
+			</flist-entry>
+		`)
+	}
+
+	// now prepend go up
+	$('mpool flist').prepend(`
+		<flist-entry fldname="${window.league}" class="folder" onclick="window.league_match = null; $this.list_league_matches(this)">
+			<etype folder>
+			</etype>
+			<ename>../</ename>
+		</flist-entry>
+	`)
+}
+
+
 
 
 
