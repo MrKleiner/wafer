@@ -78,10 +78,36 @@ class fjournal:
 				continue
 
 
+# server has the following stuff:
+# .Path                 = pathlib Path
+# .json                 = json module
+# .sys                  = sys module
+# .output               = sys.stdout.buffer.write = write bytes to the client
+# .platform             = which platform this server is running on (windows/linux) (as if there are more than two options)
+# .headers              = headers which came with the incoming http request
+# .ftp_root             = pathlib Path which points to the FTP root
+# .sysdb_path           = util db, like temp files and media previews
+# .authdb_path:         = pathlib Path to the root of the auth db
+#     -authsys
+#        -users
+#            -userdb.db
+#        -details
+#            ...
+#        -cfg
+#            -default_user
+# .tmp_dir              = temp dir which is allowed to be big
+# .server_root          = server root (where index.html is at)
+# .util                 = util functions from the util.py file
+# .allowed_vid          = recognized video formats
+# .allowed_img          = recognized image formats for ffmpeg
+# .allowed_img_special  = recognized image formats for imagemagick and not ffmpeg (allows supporting more formats while not loosing too much speed)
+
 class server:
 	"""All the stuff passed to the server + server config"""
-	def __init__(self, cgi, sys, cgitb):
+	# def __init__(self, cgi, sys, cgitb):
+	def __init__(self):
 		# from util import giga_json
+		import cgi, sys, cgitb
 		from pathlib import Path
 		import os
 		from server_config import server_config as svconf
@@ -90,15 +116,16 @@ class server:
 		from auth.auth import wfauth
 
 		# traceback messages
-		cgitb.enable()
+		cgitb.enable(format='text')
 
 		# don't append modules many times...
-		self.Pathl = Path
 		self.Path = Path
 		self.json = json
 
 		# input sys module
-		self.inp_sys = sys
+		self.sys = sys
+
+		self.output = sys.stdout.buffer.write
 
 		# buffer to flush
 		self.sv_buffer = b''
@@ -118,10 +145,9 @@ class server:
 				self.headers[hd.replace('HTTP_', '').lower()] = os.environ[hd]
 
 
-
-
 		# read body content, if any
 		self.bin = b''
+		# response is the one this script is about to output
 		self.response_headers = {}
 		try:
 			self.bin = sys.stdin.buffer.read()
@@ -208,7 +234,8 @@ class server:
 			'arw',
 			'jfif',
 			'jif',
-			'hdr'
+			'hdr',
+			'exr'
 		]
 
 		# special means ffmpeg cannot deal with it
@@ -217,7 +244,8 @@ class server:
 			'psd',
 			'arw',
 			'raw',
-			'hdr'
+			'hdr',
+			'exr'
 		]
 
 
@@ -262,15 +290,15 @@ class server:
 			# except:
 			# 	h = str(h).encode()
 
-			self.inp_sys.stdout.buffer.write(f'{h}: {self.response_headers[h]}\r\n'.encode())
+			self.output(f'{h}: {self.response_headers[h]}\r\n'.encode())
 		# content type
-		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n\r\n'.encode())
+		self.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
 		# buffer
-		self.inp_sys.stdout.buffer.write(self.sv_buffer)
+		self.output(self.sv_buffer)
 		# do flush
-		self.inp_sys.stdout.buffer.flush()
-		self.inp_sys.stdout.flush()
-		self.inp_sys.exit()
+		self.sys.stdout.buffer.flush()
+		self.sys.stdout.flush()
+		self.sys.exit()
 
 	def set_header(self, hkey, hval):
 		self.response_headers[hkey] = hval
@@ -294,7 +322,7 @@ class server:
 		if not flpath or not flname:
 			raise Exception('x_files transfer: one of the arguments is completely invalid')
 
-		floc = self.Pathl(flpath)
+		floc = self.Path(flpath)
 
 		if not floc.is_file():
 			raise Exception('x_files transfer: file path does not exist')
@@ -304,13 +332,13 @@ class server:
 		# sys.stdout.write(b'Content-Disposition: attachment; filename="bigfile.mp4"\r\n')
 		# sys.stdout.write(b'X-Sendfile: /home/basket/scottish_handshake/db/20181225_182650.ts\r\n\r\n')
 
-		self.inp_sys.stdout.buffer.write('Content-Type: application/octet-stream\r\n'.encode())
-		self.inp_sys.stdout.buffer.write(f"""Content-Disposition: attachment; filename="{str(flname)}"\r\n""".encode())
-		self.inp_sys.stdout.buffer.write(f"""X-Sendfile: {str(floc)}\r\n\r\n""".encode())
+		self.output('Content-Type: application/octet-stream\r\n'.encode())
+		self.output(f"""Content-Disposition: attachment; filename="{str(flname)}"\r\n""".encode())
+		self.output(f"""X-Sendfile: {str(floc)}\r\n\r\n""".encode())
 
-		self.inp_sys.stdout.buffer.flush()
-		self.inp_sys.stdout.flush()
-		self.inp_sys.exit()
+		self.sys.stdout.buffer.flush()
+		self.sys.stdout.flush()
+		self.sys.exit()
 
 
 	# it shouldn't be here, but it's here because of performance reasons
@@ -328,12 +356,21 @@ class md_actions:
 		self.action = sv.prms.get('action')
 
 	def eval_action(self):
-		# if action from url params is in the registry then execute
-		if self.action in self.reg:
-			self.reg[self.action]()
-		else:
-			self.srv.bin_write('invalid action'.encode())
-			self.srv.flush()
+		try:
+			# if action from url params is in the registry then execute
+			if self.action in self.reg:
+				self.reg[self.action]()
+			else:
+				# todo: is it really a fatal error?
+				self.srv.set_header('wafer-fatal-error', 'invalid_action')
+				self.srv.flush(f"""Details: {self.action}, {self.reg}""".encode())
+		except Exception as e:
+			import sys
+			self.srv.output('wafer-fatal-error: raw_exception\r\n'.encode())
+			self.srv.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
+			# self.srv.set_header('wafer-fatal-error', 'raw_exception')
+			# self.srv.flush(str(e).encode())
+			raise e
 
 
 

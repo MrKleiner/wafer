@@ -248,17 +248,18 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 	// try getting the upload token
 	var lfs_upl_token = null
 	if (!inf['upl_token']){
-		const get_lfs_upl_token = await $all.core.py_get(
-			'ft/upload',
-			{
+		const get_lfs_upl_token = await $all.core.py_cmd({
+			'module': 'ft/upload',
+			'rqt': 'get',
+			'prms': {
 				'action': 'init_lfs',
 				'declare_size': fl.size,
 				'declare_hash': fl_hash,
 				'file_name': fl.name,
 				'dest_dir': inf['dest']
 			},
-			'json'
-		)
+			'load_as': 'json'
+		})
 		var lfs_upl_token = get_lfs_upl_token['token']
 	}else{
 		var lfs_upl_token = inf['upl_token']
@@ -291,16 +292,17 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 		// if slice is of 0 length it means that there's nothing left to send
 		if (fl_chunk.byteLength <= 0){break}
 		// otherwise - send it to the server
-		var chunk_send_echo = await $all.core.py_send(
-			'ft/upload',
-			{
+		var chunk_send_echo = await $all.core.py_cmd({
+			'module': 'ft/upload',
+			'rqt': 'post',
+			'prms': {
 				'action': 'lfs_add',
 				'upload_token': lfs_upl_token,
 				'dest_dir': inf['dest']
 			},
-			fl_chunk,
-			'text'
-		)
+			'payload': fl_chunk,
+			'load_as': 'text'
+		})
 
 		// shift file cursor
 		offs += chunk_size
@@ -320,15 +322,16 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 	if(!ctrl.alive){return}
 
 	// collapse LFS
-	const collapse_response = await $all.core.py_get(
-		'ft/upload',
-		{
+	const collapse_response = await $all.core.py_cmd({
+		'module': 'ft/upload',
+		'rqt': 'get',
+		'prms': {
 			'action': 'lfs_collapse',
 			'upload_token': lfs_upl_token,
 			'dest_dir': inf['dest']
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	rst_protocol['collapsed'] = true
 	do_rst ? null : window.localStorage.setObj('restore_protocol', rst_protocol)
 	do_rst ? null : window.localStorage.setObj('restore_protocol', {})
@@ -338,14 +341,16 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 
 	// important todo: is there a better time to do this?
 	// generate webm preview
-	$all.core.py_get(
-		'poolsys/poolsys',
-		{
+	$all.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'generate_webm_preview',
 			'vidpath': `${inf.dest}/${inf.file.name}`
 		},
-		'text'
-	)
+		'load_as': 'text'
+
+	})
 
 	// also append newly created element to the tree
 	const fext = inf.file.name.split('.').at(-1).trim().lower()
@@ -372,14 +377,15 @@ $this.lfs_upload = async function(ctrl, inf, start_offs=0)
 
 $this.dl_many = async function()
 {
-	const manydl_response = await $all.core.py_send(
-		'ft/download',
-		{
+	const manydl_response = await $all.core.py_cmd({
+		'module': 'ft/download',
+		'rqt': 'post',
+		'prms': {
 			'action': 'create_zip'
 		},
-		JSON.stringify($all.main_pool.media_selection),
-		'json'
-	)
+		'payload': JSON.stringify($all.main_pool.media_selection),
+		'load_as': 'json'
+	})
 
 	window.open(manydl_response['cmd'])
 }

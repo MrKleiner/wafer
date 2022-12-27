@@ -31,6 +31,8 @@ def hash_file(filepath=None, meth='md5', mb_read=100):
 		file_hash = hashlib.sha256()
 	if meth == 'sha512':
 		file_hash = hashlib.sha512()
+	if meth == 'sha1':
+		file_hash = hashlib.sha1()
 
 	with open(file, 'rb') as f: # Open the file to read it's bytes
 		fb = f.read(BLOCK_SIZE) # Read from the file. Take in the amount declared above

@@ -132,7 +132,7 @@ $this.sysloader = async function(sysname=null, static=false)
 	};
 
 	// start loading...
-	return new Promise(function(resolve, reject){
+	return new Promise(async function(resolve, reject){
 		fetch(`panels/${sysname}.html`, {
 			'headers': {
 				'accept': '*/*',
@@ -146,7 +146,7 @@ $this.sysloader = async function(sysname=null, static=false)
 		.then(function(response) {
 			// print(response.status);
 			if (response.status == 404){
-				print('Failed to load a panael', 'Reason:', 'File cannot be found on server');
+				print('Failed to load a panel', 'Reason:', 'File cannot be found on server');
 				resolve({'ok': false, 'reason': 'invalid_url'})
 				return
 			}
@@ -803,6 +803,118 @@ $this.py_send = async function(mod='', prms={}, payload='', load_as='text')
 		});
 	});
 }
+
+
+
+// prms: URL parameters to pass to the CGI script
+// rqt: rquest type (post/get)
+// payload: payload to send. Has to be proper shit and not raw objects
+// as: treat response as text/json/buffer
+// $this.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
+const pycmd_defaults = {
+	'module': '',
+	'rqt': 'post',
+	'prms': {},
+	'payload': '',
+	'load_as': 'text'
+}
+$this.py_cmd = async function(rprms={})
+{
+	// overwrite defaults with new
+	const config = Object.assign({}, pycmd_defaults, rprms);
+
+	const rq_headers = {
+		'accept': '*/*',
+		'cache-control': 'no-cache',
+		'pragma': 'no-cache'
+	}
+
+	const add_jwt = window.localStorage.getItem('auth_token')
+	if (add_jwt){
+		rq_headers['jwt'] = add_jwt
+	}
+
+	// convert params to URL params
+	const urlParams = new URLSearchParams(config.prms);
+
+	// construct the final request URL
+	const tgt_url = `${htbin}/${config.module}.pyc?${urlParams.toString()}`;
+
+	// exec...
+	return new Promise(async function(resolve, reject){
+
+		if (config.rqt.toLowerCase() == 'post'){
+			// convert payload to BLOB
+			const pl = new Blob([config.payload], {type: 'text/plain'});
+
+			const response =
+			await fetch(tgt_url, {
+				'headers': rq_headers,
+				'method': 'POST',
+				'body': pl,
+				'mode': 'cors',
+				'credentials': 'omit'
+			})
+		}
+
+		if (config.rqt.toLowerCase() == 'get'){
+			const response =
+			await fetch(tgt_url, {
+				'headers': rq_headers,
+				'method': 'GET',
+				'mode': 'cors',
+				'credentials': 'omit'
+			})
+		}
+
+		if (response.status == 404){
+			console.warn(`py_cmd: server responded with 404 to a ${rqt} request`);
+			return
+		}
+
+		// theoretically, with the new server system - no uncaught erros are possible...
+		// so, before treating response body - check for errors
+		if (response.get('wafer-fatal-error') != null){
+			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.get('wafer-fatal-error')}):`, await response.text())
+			resolve(false)
+			return
+		}
+
+
+		// no error means shit is formatted the expected way
+		// well, really, the try/except block is just better...
+		// actually, why not both ?
+
+		// it's possible to only retreive one type of data from the response...
+		// with no possibility of re-reading it...
+		// just read as bytes right away
+		// and then treat accordingly
+		// const bin = new Uint8Array(await response.arrayBuffer())
+
+		// update: no
+
+		if (config.load_as == 'text'){
+			// important todo: is there any difference between .text() and UTF8ArrToStr ?
+			// resolve(lizard.UTF8ArrToStr(bin))
+			resolve(await response.text())
+			return
+		}
+		if (config.load_as == 'json'){
+			// todo: why not use .json() ?
+			// resolve(JSON.parse(lizard.UTF8ArrToStr(bin)))
+			resolve(await response.json())
+			return
+		}
+		if (config.load_as == 'buffer'){
+			// resolve(bin)
+			resolve(new Uint8Array(await response.arrayBuffer()))
+			return
+		}
+		console.warn(`py_cmd (${rqt}): falling back to default data type (text), because ${config.load_as} is unknown`);
+		resolve(await response.text())
+	});
+}
+
 
 
 // determine whether the user is logged in or not

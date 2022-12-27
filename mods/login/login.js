@@ -12,15 +12,16 @@ $this.load_module = async function()
 
 $this.intrusion = async function()
 {
-	const try_login = await $all.core.py_get(
-		'login/login',
-		{
+	const try_login = await $all.core.py_cmd({
+		'module': 'login/login',
+		'rqt': 'get',
+		'prms': {
 			'action': 'login',
 			'pswd': $('login #login_pswd').val().trim() || '0',
 			'username': $('login #login_username').val().trim() || '0'
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	print(try_login)
 
 	// if received token - reload

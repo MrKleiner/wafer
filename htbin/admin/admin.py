@@ -1,7 +1,7 @@
-import cgi, sys, cgitb
+import sys
 sys.path.append('..')
 from server import server, md_actions
-server = server(cgi, sys, cgitb)
+server = server()
 
 # classified info:
 
