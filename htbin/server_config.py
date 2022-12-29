@@ -61,6 +61,7 @@ server_config = {
 	# it might get quite big
 	# aka if serverside zipping is enabled and someone downloads a folder of photos - 
 	# ~1GB zip file is generated
+	# in addition, all the previews are stored here
 	# A switch between serverside and clientside zipping is coming soon
 	"sysdb": "/home/basket/wafer_sys_db"
 }

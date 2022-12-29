@@ -17,11 +17,11 @@ class fjournal:
 	"""a file watcher"""
 	# srv = server variable
 	def __init__(self, srv):
-		from pathlib import Path
-		self.Path = Path
+		self.Path = srv.Path
 		self.jdb = srv.sysdb_path / 'journal'
 		self.srv = srv
 		# ensure that the journal folder exists
+		# todo: this is not needed anymore with the new system
 		self.jdb.mkdir(exist_ok=True)
 
 	# takes the path to the file and the life length
@@ -29,7 +29,7 @@ class fjournal:
 	# overwrites previous record, if any
 	# important todo: choose whether to overwrite or no
 	def reg_file(self, flpath, life=5):
-		import json
+		json = self.srv.json
 		from datetime import datetime, timedelta
 
 		flpath = self.Path(flpath)
@@ -49,7 +49,7 @@ class fjournal:
 			# second line represents file path to delete
 			j.write(str(flpath).encode())
 
-	# manually remove journal entry
+	# manually remove a journal entry
 	def unreg_file(self, flpath):
 		tgt_unreg = self.Path(flpath)
 		unreg_index = self.srv.util.eval_hash(str(flpath), 'sha256')
@@ -60,13 +60,14 @@ class fjournal:
 	# todo: create prefixed type which says that every file with this prefix has to be deleted
 	def process_jr(self):
 		from datetime import datetime
-		from pathlib import Path
+		Path = self.srv.Path
+
 		for jf in self.jdb.glob('*.jr'):
 			try:
 				# read file contents
 				jdata = jf.read_text().split('\n')
 
-				# if the date is older than now - delete
+				# if the date is older than now - delete the target file
 				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
 				now_date = datetime.now()
 				# delete target file
@@ -86,7 +87,7 @@ class fjournal:
 # .platform             = which platform this server is running on (windows/linux) (as if there are more than two options)
 # .headers              = headers which came with the incoming http request
 # .ftp_root             = pathlib Path which points to the FTP root
-# .sysdb_path           = util db, like temp files and media previews
+# .sysdb_path           = util db, like temp files, media previews and media queue
 # .authdb_path:         = pathlib Path to the root of the auth db
 #     -authsys
 #        -users
@@ -101,10 +102,18 @@ class fjournal:
 # .allowed_vid          = recognized video formats
 # .allowed_img          = recognized image formats for ffmpeg
 # .allowed_img_special  = recognized image formats for imagemagick and not ffmpeg (allows supporting more formats while not loosing too much speed)
+# .wfauth               = wafer auth class
+# .sv_cfg               = raw server config
+
+
+
+
+
 
 class server:
 	"""All the stuff passed to the server + server config"""
 	# def __init__(self, cgi, sys, cgitb):
+	# todo: separate stuff that is not wafer-specific into a function
 	def __init__(self):
 		# from util import giga_json
 		import cgi, sys, cgitb
@@ -112,11 +121,13 @@ class server:
 		import os
 		from server_config import server_config as svconf
 		import json, platform
-		import util
+		import wafer_util
 		from auth.auth import wfauth
 
 		# traceback messages
 		cgitb.enable(format='text')
+
+		self.cgitb = cgitb
 
 		# don't append modules many times...
 		self.Path = Path
@@ -156,11 +167,11 @@ class server:
 
 		# server root folder
 		for pr in Path(__file__).parents:
-			if (pr / 'htbin').is_dir():
+			if (pr / 'wafer_root.wfrt').is_file():
 				self.server_root = pr
 				break
 
-		# todo: just don't bother and distribute two separate versions for linux and for windows
+		# todo: just don't bother and distribute two separate versions for linux and for windows ?
 		self.platform = platform.system().lower()
 
 		# raw server config
@@ -182,11 +193,11 @@ class server:
 		# temp dir for temp files
 		self.tmp_dir = self.sysdb_path / 'temps'
 
-		# important todo: this is only here to quickly mute a few errors
-		self.preview_db = self.sysdb_path / 'preview_queue'
-
 		# util functions from the util.py file
 		self.util = util
+
+		# also make cgitb write errors to files
+		cgitb.enable(format='text', logdir=str(self.sysdb_path / 'cgi_err'))
 
 
 		#
@@ -258,6 +269,7 @@ class server:
 		self.wfauth = wfauth(self)
 
 
+
 	# journal which keeps track of files to delete
 	def journal(self):
 		return fjournal(self)
@@ -272,9 +284,13 @@ class server:
 	# def tr_type(self, newname):
 		# pass
 
+	# add error header with specified data
+	def error(self, err):
+		self.set_header('wafer-fatal-error', str(err))
 
 	# spit shit
-	# pass bytes to first add these bytes to the buffer and THEN flush
+	# either fill the buffer gradually with .bin_write and then flush
+	# or flush bytes immediately by passing bytes to the flush function
 	def flush(self, add_b=None):
 		if add_b:
 			self.bin_write(add_b)
@@ -347,7 +363,13 @@ class server:
 		return self.json.loads(self.Path(pth).read_bytes())
 
 
+	# write error traceback to file
+	# def filetb(self):
+	# 	self.cgitb.
 
+
+# all requests are evaluated through this file for better error handling
+# and action redirection
 class md_actions:
 	"""Actions"""
 	def __init__(self, sv, registry={}):
@@ -362,12 +384,15 @@ class md_actions:
 				self.reg[self.action]()
 			else:
 				# todo: is it really a fatal error?
-				self.srv.set_header('wafer-fatal-error', 'invalid_action')
+				self.srv.error('invalid_action')
 				self.srv.flush(f"""Details: {self.action}, {self.reg}""".encode())
 		except Exception as e:
 			import sys
 			self.srv.output('wafer-fatal-error: raw_exception\r\n'.encode())
 			self.srv.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
+			# todo: use text/html; charset=UTF-8 instead ?
+			# text/html; charset=UTF-8
+
 			# self.srv.set_header('wafer-fatal-error', 'raw_exception')
 			# self.srv.flush(str(e).encode())
 			raise e

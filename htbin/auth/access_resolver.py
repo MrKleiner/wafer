@@ -1,6 +1,7 @@
 
 # panzerfaust
 
+# despite large amount of code it only takes a few milliseconds per evaluation
 def resolver(pth, rule, wannawrite=False):
 	declared = Path(rule['rule'])
 	tgt = Path(pth)

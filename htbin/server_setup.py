@@ -1,12 +1,23 @@
 
 
 
+# Fast setup guide:
+# Run this file (server_setup.py) from the user which would later run the lightppd process
+# Setup lighttpd (apt install lighttpd)
+# Create lighttpd config which points to the directory with index.html as server root (parent of this dir)
+# Configure lighttpd the way that all .py files inside htbin are executed with the latest python version (3.8+)
+# Enable x-sendfile in the said lightppd config
+# enjoy
+
+
+
+
+
 
 # This script will set the server up before you can use it
 # It's fine that this script is in the htbin directory,
 # running it twice doesn't do anything and users cannot overload the system by randomly calling it
 # (there are way more efficient and obvious ways of crashing/abusing/raping this poor system)
-
 
 
 
@@ -211,6 +222,8 @@ def run_setup():
 	# create required folders
 	(sysdb_root / 'journal').mkdir()
 	(sysdb_root / 'preview_queue').mkdir()
+	(sysdb_root / 'previews').mkdir()
+	(sysdb_root / 'cgi_err').mkdir()
 	(sysdb_root / 'temps').mkdir()
 
 

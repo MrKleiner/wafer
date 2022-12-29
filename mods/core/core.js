@@ -659,7 +659,7 @@ $(document).ready(function(){
 // prms: URL parameters to pass to the CGI script
 // as: treat response as text/json/buffer
 // returns json with response status and payload
-$this.py_get = async function(mod='', prms={}, load_as='text')
+$this.py_gets = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
@@ -737,7 +737,7 @@ $this.py_get = async function(mod='', prms={}, load_as='text')
 // prms: URL parameters to pass to the CGI script
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-$this.py_send = async function(mod='', prms={}, payload='', load_as='text')
+$this.py_sends = async function(mod='', prms={}, payload='', load_as='text')
 {
 	const rq_headers = {
 		'accept': '*/*',
@@ -874,7 +874,7 @@ $this.py_cmd = async function(rprms={})
 
 		// theoretically, with the new server system - no uncaught erros are possible...
 		// so, before treating response body - check for errors
-		if (response.get('wafer-fatal-error') != null){
+		if (response.headers.get('wafer-fatal-error') != null){
 			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.get('wafer-fatal-error')}):`, await response.text())
 			resolve(false)
 			return
