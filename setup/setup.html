@@ -5,8 +5,7 @@
 		<title>Wafer Setup</title>
 		<link rel="shortcut icon" href="/assets/hat.png" type="image/x-icon">
 
-		<!-- CSS INDEX -->
-		<link rel="stylesheet" type="text/css" href="./welcome.css">
+		<link rel="stylesheet" type="text/css" href="/setup/setup.css">
 	</head>
 	
 	<body class="flex_col">
@@ -17,13 +16,19 @@
 		</header>
 		<div id="quick_explanation">
 			You'll know what to do as you progress through these steps.
-			After that - you're done, it works. There are no other extra steps or antyhing.
+			After that - you're done, it works. There are no other extra steps or anything.
 			Keep in mind that it's possible to adjust all of these settings later on.
 			<br>
 			You're forced to do this now, because the system will not wind up without this info.
 			<br>
 			The system will not let you proceed if there's something wrong, but if you forgot to take your meds today
 			and intentionally made it malfunction - you're screwed. Reinstall the entire thing.
+			<br>
+			Also keep in mind that by using this software you agree that its creator
+			(just like all the authors of opensource libraries used in this software)
+			takes 0 responsibility
+			if the said software accidentally hacks Pentagon or formats all your RAIDs
+			(bro tip: as of now the system doesn't has a single function related to deleting any files, except cache stuff)
 		</div>
 
 		<main class="flex_col">
@@ -172,5 +177,5 @@
 		<div id="execute_setup" class="exec_locked">Execute Setup</div>
 	</body>
 	<script src='/apis/jquery/3_6_0/jquery.min.js'></script>
-	<script src='./welcome.js'></script>
+	<script src='/setup/setup.js'></script>
 </html>

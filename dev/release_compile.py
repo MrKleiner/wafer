@@ -52,6 +52,10 @@ tree_copy(project / 'mods_c', release_dir_win)
 tree_copy(project / 'htbin', release_dir)
 tree_copy(project / 'htbin', release_dir_win)
 
+# copy setup dir
+tree_copy(project / 'setup', release_dir)
+tree_copy(project / 'setup', release_dir_win)
+
 # windows specific
 tree_copy(project / 'bins', release_dir_win)
 

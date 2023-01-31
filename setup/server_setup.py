@@ -5,7 +5,7 @@ import subprocess as sp
 # from htcompile import compile_server
 # import util
 
-thisdir = Path(__file__).parent
+server = Path(__file__).parent
 
 
 # The sane maximum size of a file stored within the system is about 24gb
@@ -50,7 +50,7 @@ def run_setup():
 
 	# First check if the databse exists already
 	if (authdb_root / 'authsys' / 'users' / 'userdb.db').is_file():
-		print('Databse is initialized already, if you want to reset it - read the instructions inside "factory_reset.py"')
+		print('Databse is initialized already, if you wish to reset it - read the instructions inside "factory_reset.py"')
 		return
 
 	# if it doesnt exist - proceed with creation n stuff

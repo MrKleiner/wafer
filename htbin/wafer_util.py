@@ -82,7 +82,7 @@ def even_points(low,up,leng):
 
 # json with comments
 # either takes bytes or path to the file
-# default = path. Add True as a second param to eval json bytes
+# default = path. Add True as a second param to eval json from passed bytes
 def giga_json(inp, bt=False):
 	import json
 	from pathlib import Path
