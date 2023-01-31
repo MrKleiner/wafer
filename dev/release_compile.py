@@ -57,11 +57,18 @@ tree_copy(project / 'setup', release_dir)
 tree_copy(project / 'setup', release_dir_win)
 
 # copy setup html to the root with the name "index.html"
-shutil.copy(project / 'panels' / 'main.html', release_dir.with_name('index.html'))
-shutil.copy(project / 'panels' / 'main.html', release_dir_win.with_name('index.html'))
+shutil.copy(project / 'setup' / 'setup.html', release_dir / 'index.html')
+shutil.copy(project / 'setup' / 'setup.html', release_dir_win / 'index.html')
 
 # windows specific
 tree_copy(project / 'bins', release_dir_win)
+
+# __pycache__ cleanup
+caches = [pc for pc in release_dir.rglob('*') if pc.is_dir() and pc.name == '__pycache__']
+caches.extend([pc for pc in release_dir_win.rglob('*') if pc.is_dir() and pc.name == '__pycache__'])
+for pycl in caches:
+	if pycl.is_dir():
+		shutil.rmtree(pycl)
 
 # copy other files
 additional = (
