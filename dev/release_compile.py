@@ -56,13 +56,17 @@ tree_copy(project / 'htbin', release_dir_win)
 tree_copy(project / 'setup', release_dir)
 tree_copy(project / 'setup', release_dir_win)
 
+# copy setup html to the root with the name "index.html"
+shutil.copy(project / 'panels' / 'main.html', release_dir.with_name('index.html'))
+shutil.copy(project / 'panels' / 'main.html', release_dir_win.with_name('index.html'))
+
 # windows specific
 tree_copy(project / 'bins', release_dir_win)
 
 # copy other files
 additional = (
 	'css_index.css',
-	'index.html',
+	# 'index.html',
 	'wafer_root.wfrt',
 	'wafer.evbinds.js',
 )
