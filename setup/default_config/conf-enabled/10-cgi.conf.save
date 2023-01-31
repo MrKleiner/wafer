@@ -1,0 +1,21 @@
+# /usr/share/doc/lighttpd/cgi.txt
+
+server.modules += ( "mod_cgi" )
+
+$HTTP["url"] =~ "^/htbin/" {
+	cgi.assign = ( ".py"  => "/usr/bin/python3" )
+	cgi.assign = ( ".pyc"  => "/usr/bin/python3" )
+#	alias.url += ( "/htbin/" => "/home/basket/scottish_handshake/htbin/" )
+}
+
+server.breakagelog = "/var/log/lighttpd/breakage.log"
+
+cgi.x-sendfile = "enable"
+fastcgi.debug = 1
+cgi.debug = 1
+## Warning this represents a security risk, as it allow to execute any file
+## with a .pl/.py even outside of /usr/lib/cgi-bin.
+#
+#cgi.assign      = (
+#	".py"  => "/usr/bin/python3"
+#)

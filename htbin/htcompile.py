@@ -19,18 +19,9 @@ def compile_server():
 		if not tgt_dest.parent.is_dir():
 			tgt_dest.parent.mkdir(parents=True)
 
-		# copy the original file
-		shutil.copy(str(pyfile), str(tgt_dest))
-
 		if not pyfile.name in ('server_config.py', 'server_setup.py', 'factory_reset.py'):
 			# compile the file
 			compiled = py_compile.compile(str(tgt_dest))
-			# move the compiled file to its original place
-			shutil.move(compiled, str(tgt_dest.with_name(pyfile.name).with_suffix('.pyc')))
-			# remove the compile src
-			tgt_dest.unlink()
-			# remove the pycache folder
-			(tgt_dest.parent / '__pycache__').rmdir()
 
 
 if __name__ == '__main__':

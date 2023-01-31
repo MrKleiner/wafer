@@ -3,16 +3,11 @@ sys.path.append('..')
 from server import server, md_actions
 server = server()
 
-# classified info:
-
-# reject reasons:
-# 1809246: bad auth
-# 1809246/nen: missing params
-
-# 2446: invalid auth username
-# 314: invalid auth password
-
-# 10092007: requested upload lfs target does not exist
+# codes:
+# 1809246
+# 2446
+# 314
+# 10092007
 
 
 # this entire class requires admin
@@ -21,14 +16,11 @@ class user_ctrl:
 
 	# init usually means auth
 	def __init__(self):
-		if not server.wfauth.isadmin:
-			server.error('bad_auth')
-			server.bin_jwrite({'status': '1809246/hobo'})
-			server.flush()
+		# reject non-admin users immediately
+		server.wfauth.request_admin()
 
 
 	# load users database
-	# token is not passed intentionally
 	# important todo: decode login/pswd on the server or on the client ?
 	# for now, decode on the client
 	def get_user_list(self):
@@ -59,6 +51,13 @@ class user_ctrl:
 
 		server.bin_jwrite(users)
 		server.flush()
+
+
+	def update_users(self):
+		pass
+
+
+
 
 
 

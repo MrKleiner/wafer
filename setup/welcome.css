@@ -1,0 +1,121 @@
+*
+{
+	padding: 0px;
+	margin: 0px;
+	font-family: 'Arial';
+}
+
+html
+{
+	background: #19191C;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.flex_col
+{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+body
+{
+	width: 1100px;
+	margin-bottom: 500px;
+}
+
+body header img
+{
+	width: 60%;
+	/*transform: translateX(9vw) scale(1.5);*/
+	user-select: none;
+	pointer-events: none;
+}
+
+body header h1
+{
+	text-align: center;
+	color: white;
+	font-size: 50px;
+}
+
+#quick_explanation
+{
+	color: white;
+	font-size: 20px;
+	text-align: center;
+}
+
+body main
+{
+	margin-top: 50px;
+	width: 80%;
+	align-items: flex-start !important;
+}
+
+main .param_row
+{
+	margin-top: 30px;
+	color: white;
+	font-size: 20px;
+	align-items: flex-start;
+	width: 100%;
+}
+
+main .param_row input
+{
+	all: unset;
+	font-size: 20px;
+	width: 100%;
+	color: white;
+	background: black;
+	outline: 1px solid rgba(255, 255, 255, 0.1);
+	padding: 5px;
+	margin-top: 5px;
+}
+
+main .param_row input:focus
+{
+	outline-color: rgba(50, 200, 255, 0.65);
+}
+
+main .param_row.row_ded input
+{
+	outline-color: red !important;
+}
+main .param_row.row_ok input
+{
+	outline-color: lime !important;
+}
+
+main .param_row .err
+{
+	color: red;
+	/*padding: 3px;*/
+	background: rgba(255, 50, 50, 0.1);
+}
+
+#execute_setup
+{
+	display: flex;
+	width: 200px;
+	height: 50px;
+	border-radius: 10px;
+	background: #305A99;
+	color: white;
+	align-items: center;
+	justify-content: center;
+	user-select: none;
+	cursor: pointer;
+	margin-top: 100px;
+}
+
+
+#execute_setup.exec_locked
+{
+	pointer-events: none;
+	cursor: default;
+	filter: grayscale(1);
+}

@@ -119,10 +119,21 @@ class wfauth:
 		}
 
 
+	def request_admin(self):
+		if not self.isadmin:
+			self.srv.fatal_error('need_admin')
+			self.srv.flush_json({'status': '1809246/hobo'})
+
+	def reject_guest(self):
+		if self.guest == True:
+			self.srv.fatal_error('guest_disallowed')
+			self.srv.flush_json({'status': '1809246/hobo', 'details': 'Guests are disallowed toexecute this action'})
+
+
 	# allow using provided userid by validating the JWT
 	# basically, a request comes with userID and a JWT token
 	# and this function is responsible for validating that the provided userid can be used
-	# theoretically, if JWT is skipped, then anyone can access anyone's account by simply changing their userid
+	# theoretically, if crypto part of JWT is skipped, then anyone can access anyone's account by simply changing their userid
 	def jwt_auth(self):
 		provided_jwt = self.srv.headers.get('jwt')
 		# if userid (and therefore the rest of jwt) is not present, then auth the request with a default user
@@ -143,11 +154,11 @@ class wfauth:
 		# if invalid - reject the request completely,
 		# since if token is present then it has to be a valid token
 		if len(jwtsplit) != 3:
-			self.srv.set_header('wafer-error', 'malformed_jwt')
-			self.srv.flush(self.srv.json.dumps({
+			self.srv.fatal_error('malformed_jwt')
+			self.srv.flush_json({
 				'error': 'malformed JWT token',
 				'details': str(jwtsplit)
-			}).encode())
+			})
 			return
 
 		# get token from authsys and check if it matches the provided one
@@ -159,11 +170,11 @@ class wfauth:
 
 		# if no user was found under specified id - reject the request
 		if not details_path.is_dir():
-			self.srv.set_header('wafer-error', 'invalid_userid')
-			self.srv.flush(self.srv.json.dumps({
+			self.srv.fatal_error('invalid_userid')
+			self.srv.flush_json({
 				'error': 'invalid_userid',
 				'details': 'User with the specified ID does not exist'
-			}).encode())
+			})
 			return
 
 		# now validate the JWT token

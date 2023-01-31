@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+	<head>
+		<meta charset="UTF-8">
+		<title>Wafer Setup</title>
+		<link rel="shortcut icon" href="/assets/hat.png" type="image/x-icon">
+
+		<!-- CSS INDEX -->
+		<link rel="stylesheet" type="text/css" href="./welcome.css">
+	</head>
+	
+	<body class="flex_col">
+		<header class="flex_col">
+			<!-- bro this looks like a fucking chocolate bar and not Wayland logo reference -->
+			<img draggable="false" src="/assets/wlogo_v1.png">
+			<h1>Welcome to Wafer setup</h1>
+		</header>
+		<div id="quick_explanation">
+			You'll know what to do as you progress through these steps.
+			After that - you're done, it works. There are no other extra steps or antyhing.
+			Keep in mind that it's possible to adjust all of these settings later on.
+			<br>
+			You're forced to do this now, because the system will not wind up without this info.
+			<br>
+			The system will not let you proceed if there's something wrong, but if you forgot to take your meds today
+			and intentionally made it malfunction - you're screwed. Reinstall the entire thing.
+		</div>
+
+		<main class="flex_col">
+
+			<div class="flex_col param_row" id="ftp_root">
+				<div class="descr">
+					Root of the target file system.
+					<br>
+					Basically, think of this as of FTP root.
+					<br>
+					It can either point to an empty <i>existing</i> directory.
+					<br>
+					OR to the directory containing some files already.
+				</div>
+				<input placeholder="DIR" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="ffmpeg_path">
+				<div class="descr">
+					Absolute path to ffmpeg
+					<br>
+					On linux it's usually /usr/bin/ffmpeg and /usr/bin/ffprobe
+					<br>
+					It's recommended to leave this empty if the system runs on Windows.
+					<br>
+					(It's recommended to check for brain cancer if the system runs on MAC)
+					<br>
+					(MZ \0\0\0 This program cannot be run in DOS mode.)
+				</div>
+				<input placeholder="FILE" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="ffprobe_path">
+				<div class="descr">
+					Absolute path to ffprobe
+					<br>
+					It's recommended to leave this empty if the system runs on Windows.
+				</div>
+				<input placeholder="FILE" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="magix_path">
+				<div class="descr">
+					<a target="_blank" href="https://imagemagick.org/">Image Magick</a> executable location.
+					<br>
+					On Linux it's pretty weird: /usr/bin/convert
+					<br>
+					It's recommended to leave this empty if the system runs on Windows.
+				</div>
+				<input placeholder="FILE" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="authdb_path">
+				<div class="descr">
+					Path to the folder where to unfold the LIGHTWEIGHT database system.
+					<br>
+					The folder doesn't has to exist beforehand.
+					<br>
+					This databse stores user info, auth system and software config.
+					<br>
+					It should never take more than 2-5GB of diskspace.
+					<br>
+					(a big portion of this estimation is derived from the upload journal, 
+					<br>
+					but it's very unlikely to run into any issues, since one MILLION uploads would result into a ~400mb journal file)
+					<br>
+					( please place me on an SSD or a really fast HDD :3 )
+					<br>
+				</div>
+				<input placeholder="DIR" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="sysdb_path">
+				<div class="descr">
+					A database of temp files and media previews.
+					<br>
+					The folder doesn't has to exist beforehand.
+					<br>
+					It might get quite big.
+					<br>
+					aka if serverside zipping is enabled and someone downloads a folder of photos - 
+					<br>
+					~1GB zip file is generated
+					<br>
+					in addition, all the previews are stored here
+					<br>
+					A switch between serverside and clientside zipping is coming soon
+					<br>
+					(if you're making backups - you can skip this folder as it doesn't hold any sensitive data)
+					<br>
+				</div>
+				<input placeholder="DIR" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+
+			<div class="flex_col param_row" id="watchdog_port">
+				<div class="descr">
+					<h3>Watchdog port</h3>
+					<br>
+					The port to run the Watchdog service on.
+					<br>
+					This is very important, since this system is responsible for two very important things:
+					<br>
+					 - Keeping track of Redundant/Obsolete/Rubbish files
+					<br>
+					 - Generating media previews
+					<br><br>
+					Changing this later requires the entire server to be shut down first.
+				</div>
+				<input placeholder="INT" type="number">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+			<div class="flex_col param_row" id="upload_service_port">
+				<div class="descr">
+					<h3>Upload Service Port</h3>
+					<br>
+					Port to run the upload system on.
+					<br>
+					This system is very important too, since it's responsible for file uploading.
+					<br><br>
+					Changing this later requires the entire server to be shut down first.
+				</div>
+				<input placeholder="INT" type="number">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
+
+
+		</main>
+
+		<div id="execute_setup" class="exec_locked">Execute Setup</div>
+	</body>
+	<script src='/apis/jquery/3_6_0/jquery.min.js'></script>
+	<script src='./welcome.js'></script>
+</html>

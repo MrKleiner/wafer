@@ -1,0 +1,45 @@
+
+
+# Wafer file transfer protocol description
+
+The base concept is very simple:
+	Per each file uploaded to the server:
+		Two files are created in the special temp directory:
+			- Upload target file
+			- Info object
+
+		"Upload target file" means:
+			The client sequentially sends chunks of the file it wants to upload to the server
+			and this file acts as a temp buffer where these chunks are being put.
+
+		"Info object" means:
+
+
+		The server receives a request, which says that user wants to upload a certain file somewhere.
+		The request could be done either through simple HTTP, or WebSockets.
+		As of now it's done through HTTP.
+		The request payload looks like this:
+			- Auth token as one of the headers (as in any other request)
+			- Body is a json where:
+				{
+					dest_dir: The destination DIRECTORY of the target file,
+					file_name: The NAME of the file to be uploaded,
+					declared_hash: The hash of the target file, which was calculated by the client before sending the request,
+					declared_size: The size of the target file, as was determined by the client before sending the request,
+					chunk_size: The size of a single chunk the client will be sending
+				}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

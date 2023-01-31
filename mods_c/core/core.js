@@ -115,10 +115,23 @@ window.bootlegger.core.allowed_img_special = [
 
 
 
+// mein kampf
+window.mein_sleep = {}
+async function wfsleep(amt=500, ref='a') {
+	return new Promise(function(resolve, reject){
+		window.mein_sleep[ref] = setTimeout(function () {
+			delete window.mein_sleep[ref]
+			resolve(true)
+		}, amt);
+	});
+}
 
-
-
-
+function closest_num_from_array(arr, goal=0)
+{
+	return arr.reduce(function(prev, curr) {
+		return (Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev);
+	});
+}
 
 
 
@@ -136,7 +149,7 @@ window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 	};
 
 	// start loading...
-	return new Promise(function(resolve, reject){
+	return new Promise(async function(resolve, reject){
 		fetch(`panels/${sysname}.html`, {
 			'headers': {
 				'accept': '*/*',
@@ -150,7 +163,7 @@ window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 		.then(function(response) {
 			// print(response.status);
 			if (response.status == 404){
-				print('Failed to load a panael', 'Reason:', 'File cannot be found on server');
+				print('Failed to load a panel', 'Reason:', 'File cannot be found on server');
 				resolve({'ok': false, 'reason': 'invalid_url'})
 				return
 			}
@@ -647,12 +660,43 @@ window.bootlegger.core.browser_detection_smart = function(evt)
 	window.session_gotcha = true;
 }
 
+window.fades = []
+window.fades_rules = {}
 
+window.bootlegger.core.spawn_fades = function()
+{
+	const amt = 100;
+	// const step = 1.0 / amt;
+	const step = 25;
+	var fdur = 0;
+	var css = `
+		<style>
 
+	`;
+
+	for (var f of range(amt)){
+		fdur += step;
+		var record = (fdur / 1000).toFixed(3);
+		window.fades_rules[fdur] = `wfade-${record.replace('.', '_')}`
+		window.fades.push(fdur);
+		css += `
+			.wfade-${record.replace('.', '_')}
+			{
+				transition: ${(fdur / 1000).toFixed(3)}s;
+				opacity: 0;
+			}
+		`;
+	}
+
+	css += '</style>';
+
+	$('body').append(css)
+}
 
 
 
 $(document).ready(function(){
+	window.bootlegger.core.spawn_fades()
 	window.bootlegger.core.browser_detection()
 	window.bootlegger.main_pool.module_loader();
 	window.bootlegger.core.profiler();
@@ -660,10 +704,39 @@ $(document).ready(function(){
 });
 
 
+window.bootlegger.core.fadeout = async function(elem, duration=500)
+{
+	const tgt = $(elem);
+	const entry = closest_num_from_array(window.fades, duration)
+	$(elem).addClass(window.fades_rules[entry])
+	await wfsleep(entry)
+	tgt.remove()
+}
+
+
+window.bootlegger.core.display_fatal_error = async function(descr=null)
+{
+	const err = $(`
+		<div class="gui_error">
+			<div class="gui_error_title">The server has responded with a fatal error:</div>
+			<div class="gui_error_body">
+				${str(descr).substring(0, 90)}
+			</div>
+			<div class="gui_error_notice">If you're experiencing unexpected behaviour - please report to the system administrator</div>
+		</div>
+	`)
+	$('#gui_error_pool').append()
+
+	// hide the error
+	await wfsleep(5000)
+	window.bootlegger.core.fadeout(err, 600)
+}
+
+
 // prms: URL parameters to pass to the CGI script
 // as: treat response as text/json/buffer
 // returns json with response status and payload
-window.bootlegger.core.py_get = async function(mod='', prms={}, load_as='text')
+window.bootlegger.core.py_gets = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
@@ -741,7 +814,7 @@ window.bootlegger.core.py_get = async function(mod='', prms={}, load_as='text')
 // prms: URL parameters to pass to the CGI script
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-window.bootlegger.core.py_send = async function(mod='', prms={}, payload='', load_as='text')
+window.bootlegger.core.py_sends = async function(mod='', prms={}, payload='', load_as='text')
 {
 	const rq_headers = {
 		'accept': '*/*',
@@ -807,6 +880,123 @@ window.bootlegger.core.py_send = async function(mod='', prms={}, payload='', loa
 		});
 	});
 }
+
+
+
+// prms: URL parameters to pass to the CGI script
+// rqt: rquest type (post/get)
+// payload: payload to send. Has to be proper shit and not raw objects
+// as: treat response as text/json/buffer
+// window.bootlegger.core.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
+const pycmd_defaults = {
+	'module': '',
+	'rqt': 'post',
+	'prms': {},
+	'payload': '',
+	'load_as': 'text'
+}
+window.bootlegger.core.py_cmd = async function(rprms={})
+{
+	// overwrite defaults with new
+	const config = Object.assign({}, pycmd_defaults, rprms);
+
+	const rq_headers = {
+		'accept': '*/*',
+		'cache-control': 'no-cache',
+		'pragma': 'no-cache'
+	}
+
+	const add_jwt = window.localStorage.getItem('auth_token')
+	if (add_jwt){
+		rq_headers['jwt'] = add_jwt
+	}
+
+	// convert params to URL params
+	const urlParams = new URLSearchParams(config.prms);
+
+	// construct the final request URL
+	const tgt_url = `${htbin}/${config.module}.pyc?${urlParams.toString()}`;
+
+	// exec...
+	return new Promise(async function(resolve, reject){
+
+		if (config.rqt.toLowerCase() == 'post'){
+			// convert payload to BLOB
+			const pl = new Blob([config.payload], {type: 'text/plain'});
+
+			const response =
+			await fetch(tgt_url, {
+				'headers': rq_headers,
+				'method': 'POST',
+				'body': pl,
+				'mode': 'cors',
+				'credentials': 'omit'
+			})
+		}
+
+		if (config.rqt.toLowerCase() == 'get'){
+			const response =
+			await fetch(tgt_url, {
+				'headers': rq_headers,
+				'method': 'GET',
+				'mode': 'cors',
+				'credentials': 'omit'
+			})
+		}
+
+		if (response.status == 404){
+			console.warn(`py_cmd: server responded with 404 to a ${rqt} request`);
+			return
+		}
+
+		// theoretically, with the new server system - no uncaught erros are possible...
+		// so, before treating response body - check for errors
+		if (response.headers.get('wafer-fatal-error') != null){
+			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.headers.get('wafer-fatal-error')}):`, await response.text())
+			window.bootlegger.core.display_fatal_error(response.headers.get('wafer-fatal-error'))
+			resolve(false)
+			return
+		}
+
+		if (response.headers.get('wafer-error') != null){
+			console.warn(`py_cmd: The server has included a warning in the response: ${response.headers.get('wafer-error')}`)
+		}
+
+
+		// no error means shit is formatted the expected way
+		// well, really, the try/except block is just better...
+		// actually, why not both ?
+
+		// it's possible to only retreive one type of data from the response...
+		// with no possibility of re-reading it...
+		// just read as bytes right away
+		// and then treat accordingly
+		// const bin = new Uint8Array(await response.arrayBuffer())
+
+		// update: no
+
+		if (config.load_as == 'text'){
+			// important todo: is there any difference between .text() and UTF8ArrToStr ?
+			// resolve(lizard.UTF8ArrToStr(bin))
+			resolve(await response.text())
+			return
+		}
+		if (config.load_as == 'json'){
+			// todo: why not use .json() ?
+			// resolve(JSON.parse(lizard.UTF8ArrToStr(bin)))
+			resolve(await response.json())
+			return
+		}
+		if (config.load_as == 'buffer'){
+			// resolve(bin)
+			resolve(new Uint8Array(await response.arrayBuffer()))
+			return
+		}
+		console.warn(`py_cmd (${rqt}): falling back to default data type (text), because ${config.load_as} is an unknown type`);
+		resolve(await response.text())
+	});
+}
+
 
 
 // determine whether the user is logged in or not

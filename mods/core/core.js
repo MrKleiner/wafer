@@ -111,10 +111,23 @@ $this.allowed_img_special = [
 
 
 
+// mein kampf
+window.mein_sleep = {}
+async function wfsleep(amt=500, ref='a') {
+	return new Promise(function(resolve, reject){
+		window.mein_sleep[ref] = setTimeout(function () {
+			delete window.mein_sleep[ref]
+			resolve(true)
+		}, amt);
+	});
+}
 
-
-
-
+function closest_num_from_array(arr, goal=0)
+{
+	return arr.reduce(function(prev, curr) {
+		return (Math.abs(curr - goal) < Math.abs(prev - goal) ? curr : prev);
+	});
+}
 
 
 
@@ -643,17 +656,77 @@ $this.browser_detection_smart = function(evt)
 	window.session_gotcha = true;
 }
 
+window.fades = []
+window.fades_rules = {}
 
+$this.spawn_fades = function()
+{
+	const amt = 100;
+	// const step = 1.0 / amt;
+	const step = 25;
+	var fdur = 0;
+	var css = `
+		<style>
 
+	`;
+
+	for (var f of range(amt)){
+		fdur += step;
+		var record = (fdur / 1000).toFixed(3);
+		window.fades_rules[fdur] = `wfade-${record.replace('.', '_')}`
+		window.fades.push(fdur);
+		css += `
+			.wfade-${record.replace('.', '_')}
+			{
+				transition: ${(fdur / 1000).toFixed(3)}s;
+				opacity: 0;
+			}
+		`;
+	}
+
+	css += '</style>';
+
+	$('body').append(css)
+}
 
 
 
 $(document).ready(function(){
+	$this.spawn_fades()
 	$this.browser_detection()
 	$all.main_pool.module_loader();
 	$this.profiler();
 	// wtf_kill_js();
 });
+
+
+$this.fadeout = async function(elem, duration=500)
+{
+	const tgt = $(elem);
+	const entry = closest_num_from_array(window.fades, duration)
+	$(elem).addClass(window.fades_rules[entry])
+	await wfsleep(entry)
+	tgt.remove()
+}
+
+
+$this.display_fatal_error = async function(descr=null)
+{
+	const err = $(`
+		<div class="gui_error">
+			<div class="gui_error_title">The server has responded with a fatal error:</div>
+			<div class="gui_error_body">
+				${str(descr).substring(0, 90)}
+			</div>
+			<div class="gui_error_notice">If you're experiencing unexpected behaviour - please report to the system administrator</div>
+		</div>
+	`)
+	$('#gui_error_pool').append()
+
+	// hide the error
+	await wfsleep(5000)
+	$this.fadeout(err, 600)
+}
 
 
 // prms: URL parameters to pass to the CGI script
@@ -875,9 +948,14 @@ $this.py_cmd = async function(rprms={})
 		// theoretically, with the new server system - no uncaught erros are possible...
 		// so, before treating response body - check for errors
 		if (response.headers.get('wafer-fatal-error') != null){
-			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.get('wafer-fatal-error')}):`, await response.text())
+			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.headers.get('wafer-fatal-error')}):`, await response.text())
+			$this.display_fatal_error(response.headers.get('wafer-fatal-error'))
 			resolve(false)
 			return
+		}
+
+		if (response.headers.get('wafer-error') != null){
+			console.warn(`py_cmd: The server has included a warning in the response: ${response.headers.get('wafer-error')}`)
 		}
 
 
@@ -910,7 +988,7 @@ $this.py_cmd = async function(rprms={})
 			resolve(new Uint8Array(await response.arrayBuffer()))
 			return
 		}
-		console.warn(`py_cmd (${rqt}): falling back to default data type (text), because ${config.load_as} is unknown`);
+		console.warn(`py_cmd (${rqt}): falling back to default data type (text), because ${config.load_as} is an unknown type`);
 		resolve(await response.text())
 	});
 }
@@ -923,57 +1001,6 @@ $this.profiler = function()
 	if (window.localStorage.getItem('auth_token')){
 		$('body').attr('logged_in', true)
 	}
-}
-
-
-
-$this.load_dbfile = function(flpath, load_as)
-{
-	return new Promise(function(resolve, reject){
-		fetch(`db/${flpath.strip('/')}`, {
-			'headers': {
-				'accept': '*/*',
-				'cache-control': 'no-cache',
-				'pragma': 'no-cache'
-			},
-			'method': 'GET',
-			'mode': 'cors',
-			'credentials': 'omit'
-		})
-		.then(async function(response) {
-			// console.log(response.status);
-			if (response.status == 404){
-				resolve('DB File load: File does not exist')
-				return
-			}
-
-			// todo: Just use response[GET AS]
-			// and require this function to take proper read as statements
-
-			// TEXT
-			if (load_as == 'text'){
-				resolve(await response.text())
-				return
-			}
-
-			// JSON
-			if (load_as == 'json'){
-				resolve(await response.json())
-				return
-			}
-
-			// buffer
-			if (load_as == 'buffer'){
-				resolve(await response.arrayBuffer())
-				return
-			}
-
-			resolve(await response.text())
-			return
-
-
-		});
-	});
 }
 
 

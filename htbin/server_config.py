@@ -24,7 +24,7 @@ server_config = {
 	# applicable entries are:
 	#	lighttpd (this is the only option for now. BUT nothing is hardcoded, so it's just one tiny little thing that has to be tackled)
 
-	# make sure to configure server so that all the .py files inside htbin are executed with python
+	# IMPORTANT: make sure to configure server so that all the .pyc files inside htbin are executed with python
 
 	"target_sys": "lighttpd",
 
@@ -39,19 +39,24 @@ server_config = {
 
 	# absolute path to ffmpeg
 	# on linux it's usually /usr/bin/ffmpeg /usr/bin/ffprobe
+	# It's recommended to leave this empty/null if on Windows
 	"ffmpeg": "/usr/bin/ffmpeg",
 
 	# absolute path to ffprobe
+	# It's recommended to leave this empty/null if on Windows
 	"ffprobe": "/usr/bin/ffprobe",
 
 	# Image Magick executable location
 	# On Linux it's pretty weird: /usr/bin/convert
+	# It's recommended to leave this empty/null if on Windows
 	"magix": "/usr/bin/convert",
 
 	# path to a folder where to unfold the LIGHTWEIGHT database system
 	# the folder doesn't has to exist beforehand
 	# this databse stores user info, auth system and software config
-	# it should never take more than 1-2GB of diskspace
+	# it should never take more than 2-5GB of diskspace
+	# (a big portion of this estimation is derived from the upload journal, 
+	# but it's very unlikely to run into any issues, since one MILLION files would result into a ~400mb journal file)
 	# ( please place me on an SSD or a really fast HDD :3 )
 	"authdb": "/home/basket/wafer_user_db",
 
@@ -63,5 +68,18 @@ server_config = {
 	# ~1GB zip file is generated
 	# in addition, all the previews are stored here
 	# A switch between serverside and clientside zipping is coming soon
-	"sysdb": "/home/basket/wafer_sys_db"
+	# (if you're making backups - you can skip this folder as it doesn't hold any sensitive data)
+	"sysdb": "/home/basket/wafer_sys_db",
+
+
+	# Port to run the Watchdogs system on
+	# This is very important, since this system is responsible for
+	# Keeping track of Redundant/Rubbish files
+	# and generating media previews
+	"watchdogs_port": None,
+
+	# Port to run the upload system on
+	# This system is very important too, since it's responsible for file uploading
+	"upload_service_port": None,
 }
+

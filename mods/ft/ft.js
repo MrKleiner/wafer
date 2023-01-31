@@ -127,7 +127,7 @@ $this.hash_file = async function(inp_file, flinf, chunk_sizemb=20)
 		// the line below is fucking priceless, it's IMPORTANT AS FUCK
 		// the cryptoJS shit only accepts EITHER strings OR WordArrays
 		var kur = CryptoJS.lib.WordArray.create(new Uint8Array(fl_slice))
-		// stuff the fucking WordArray down cryptoJS throat
+		// stuff the fucking WordArray down cryptoJS' throat
 		sha256.update(kur)
 
 		// todo: why is visual feedback here and not anywhere else

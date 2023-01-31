@@ -83,9 +83,9 @@ class fjournal:
 # .Path                 = pathlib Path
 # .json                 = json module
 # .sys                  = sys module
-# .output               = sys.stdout.buffer.write = write bytes to the client
-# .platform             = which platform this server is running on (windows/linux) (as if there are more than two options)
-# .headers              = headers which came with the incoming http request
+# .output               = sys.stdout.buffer.write = write bytes to the client directly (edge cases)
+# .platform             = which platform this server is running on (windows/linux) (as if there could be more than two options)
+# .headers              = headers which came with the incoming http request as dict
 # .ftp_root             = pathlib Path which points to the FTP root
 # .sysdb_path           = util db, like temp files, media previews and media queue
 # .authdb_path:         = pathlib Path to the root of the auth db
@@ -98,17 +98,24 @@ class fjournal:
 #            -default_user
 # .tmp_dir              = temp dir which is allowed to be big
 # .server_root          = server root (where index.html is at)
-# .util                 = util functions from the util.py file
-# .allowed_vid          = recognized video formats
+# .util                 = util functions from the wafer_util.py file
+# .allowed_vid          = recognized video formats (ffmpeg)
 # .allowed_img          = recognized image formats for ffmpeg
-# .allowed_img_special  = recognized image formats for imagemagick and not ffmpeg (allows supporting more formats while not loosing too much speed)
+# .allowed_img_special  = recognized image formats for imagemagick and not ffmpeg (allows supporting more formats)
 # .wfauth               = wafer auth class
 # .sv_cfg               = raw server config
 
 
-
-
-
+# .journal                     = file journal system
+# .bin_as_json                 = tries evaluating input data as json
+# .error(error_details)        = spit a fatal error (through header)
+# .flush(add_bytes)            = flush existing buffer and exit, optionally adding more bytes
+# .flush_json(json)            = flush data as json immediately
+# .set_header(hname, hval)     = add header to the response
+# .bin_write(bytes)            = append bytes to the response buffer
+# .bin_jwrite(json)            = add json to output buffer
+# .x_files(filepath)           = transfer file from the specified filepath to the client
+# .jload(filepath)             = load json from filepath (pathlib supported)
 
 class server:
 	"""All the stuff passed to the server + server config"""
@@ -117,11 +124,10 @@ class server:
 	def __init__(self):
 		# from util import giga_json
 		import cgi, sys, cgitb
-		from pathlib import Path
-		import os
-		from server_config import server_config as svconf
-		import json, platform
+		import os, json, platform
 		import wafer_util
+		from pathlib import Path
+		from server_config import server_config as svconf
 		from auth.auth import wfauth
 
 		# traceback messages
@@ -158,14 +164,16 @@ class server:
 
 		# read body content, if any
 		self.bin = b''
-		# response is the one this script is about to output
+		# response headers are the ones this script is about to output to the client
 		self.response_headers = {}
+		# todo: there are definitely better ways of determining whether the body content could be read or not
 		try:
 			self.bin = sys.stdin.buffer.read()
 		except:
 			pass
 
 		# server root folder
+		# todo: can this be faster ?
 		for pr in Path(__file__).parents:
 			if (pr / 'wafer_root.wfrt').is_file():
 				self.server_root = pr
@@ -194,7 +202,7 @@ class server:
 		self.tmp_dir = self.sysdb_path / 'temps'
 
 		# util functions from the util.py file
-		self.util = util
+		self.util = wafer_util
 
 		# also make cgitb write errors to files
 		cgitb.enable(format='text', logdir=str(self.sysdb_path / 'cgi_err'))
@@ -211,6 +219,7 @@ class server:
 		# one important excuse of this being hardcoded is that some file formats are not supported by ffmpeg
 		# but are supported by image magick
 
+		# video formats supported by ffmpeg
 		self.allowed_vid = [
 			'mp4',
 			# IMPORTANT: RECHECK
@@ -222,9 +231,13 @@ class server:
 			'avi',
 			'mpeg',
 			'ogv',
-			'3gp'
+			'3gp',
+			# todo: but like... really ?????
+			'wmv',
+			'flv',
 		]
 
+		# image formats supported by the combination of ffmpeg and image magick
 		self.allowed_img = [
 			'jpg',
 			'jpeg',
@@ -246,17 +259,28 @@ class server:
 			'jfif',
 			'jif',
 			'hdr',
-			'exr'
+			'exr',
+			'dds',
+			'ico',
+			'pfm',
+			'svg',
 		]
 
 		# special means ffmpeg cannot deal with it
+		# but image magick can
+		# the reason ffmpeg is a preferred option is because it works twice as fast compared to imagemagick
 		self.allowed_img_special = [
 			'tga',
 			'psd',
 			'arw',
 			'raw',
 			'hdr',
-			'exr'
+			# todo: ffmpeg can actually deal with exr files...
+			'exr',
+			'dds',
+			'ico',
+			'pfm',
+			'svg',
 		]
 
 
@@ -275,6 +299,9 @@ class server:
 		return fjournal(self)
 
 
+	def bin_as_json(self):
+		return self.json.loads(self.bin)
+
 
 	# @property
 	# def tr_type(self):
@@ -285,8 +312,12 @@ class server:
 		# pass
 
 	# add error header with specified data
-	def error(self, err):
+	def fatal_error(self, err):
 		self.set_header('wafer-fatal-error', str(err))
+
+	def error(self, err):
+		self.set_header('wafer-error', str(err))
+
 
 	# spit shit
 	# either fill the buffer gradually with .bin_write and then flush
@@ -315,6 +346,12 @@ class server:
 		self.sys.stdout.buffer.flush()
 		self.sys.stdout.flush()
 		self.sys.exit()
+
+
+	def flush_json(self, j):
+		self.bin_jwrite(j)
+		self.flush()
+
 
 	def set_header(self, hkey, hval):
 		self.response_headers[hkey] = hval
@@ -363,19 +400,16 @@ class server:
 		return self.json.loads(self.Path(pth).read_bytes())
 
 
-	# write error traceback to file
-	# def filetb(self):
-	# 	self.cgitb.
 
-
-# all requests are evaluated through this file for better error handling
+# all requests are evaluated through this gateway for better error handling
 # and action redirection
+# as of now this is basicaly the gateway and should be called "gateway"
 class md_actions:
 	"""Actions"""
-	def __init__(self, sv, registry={}):
+	def __init__(self, srv, registry={}):
 		self.reg = registry
-		self.srv = sv
-		self.action = sv.prms.get('action')
+		self.srv = srv
+		self.action = self.srv.prms.get('action')
 
 	def eval_action(self):
 		try:
@@ -384,17 +418,26 @@ class md_actions:
 				self.reg[self.action]()
 			else:
 				# todo: is it really a fatal error?
-				self.srv.error('invalid_action')
-				self.srv.flush(f"""Details: {self.action}, {self.reg}""".encode())
+				self.srv.fatal_error('invalid_action')
+				self.srv.flush(f"""Details: Requested: {self.action}, Available: {self.reg}""".encode())
 		except Exception as e:
-			import sys
-			self.srv.output('wafer-fatal-error: raw_exception\r\n'.encode())
-			self.srv.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
-			# todo: use text/html; charset=UTF-8 instead ?
-			# text/html; charset=UTF-8
+			# The way this works is pretty interesting:
 
-			# self.srv.set_header('wafer-fatal-error', 'raw_exception')
-			# self.srv.flush(str(e).encode())
+			# When exception occurs upon module action evaluation - 
+			# the server outputs a header to the output buffer which indicates that the fatal error occured
+			# and then raises the error
+
+			# When an error is raised, the cgitb module adds a PROPERLY FORMATTED error traceback to the output buffer
+			# IN ADDITION to the header indicating that a fatal error occured
+			# Not only that, but cgitb also dumps the error to the logs folder
+
+			# The most important part is that all of the above happens
+			# while keeping the client aware of the said fatal error
+
+			self.srv.output('wafer-fatal-error: raw_exception\r\n'.encode())
+			# todo: citb adds appropriate content type automatically
+			self.srv.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
+
 			raise e
 
 

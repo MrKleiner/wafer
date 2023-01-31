@@ -402,8 +402,61 @@ body[logged_in="false"] #nav_sign_out, body[logged_in="false"] #nav_enter_edit
 
 
 
-
 .foil_hidden
 {
 	display: none !important;
+}
+
+
+
+
+
+
+
+/*==============================================*/
+/*GUI ERRORS*/
+/*==============================================*/
+/*huge red boxes that popu in the top left corner of the screen*/
+
+
+#gui_error_pool
+{
+	position: fixed;
+	display: flex;
+	flex-direction: column;
+	width: fit-content;
+}
+
+.gui_error
+{
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	width: 450px;
+	height: 150px;
+/* 	padding: 10px; */
+	background: #66312c;
+	border-radius: 7px;
+	border: 2px solid #ff3f3f;
+	font-size: 15px;
+	color: white;
+}
+
+.gui_error .gui_error_body
+{
+	color: #ffef9f;
+}
+
+
+.gui_error .gui_error_title
+{
+	padding: 7px;
+	font-size: 18px;
+	background: rgba(0, 0, 0, 0.15);
+}
+
+.gui_error .gui_error_notice
+{
+	background: rgba(0, 0, 0, 0.15);
+	padding: 5px;
 }

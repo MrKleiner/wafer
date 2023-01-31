@@ -14,13 +14,14 @@ window.bootlegger.admin.load_module = async function()
 	$('admin #raid_root_path input').val(fstruct_root['root_path']);
 
 	// load users
-	const users = await window.bootlegger.core.py_get(
-		'admin/admin',
-		{
+	const users = await window.bootlegger.core.py_cmd({
+		'module': 'admin/admin',
+		'rqt': 'get',
+		'prms': {
 			'action': 'get_user_list'
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	print('loaded users', users)
 	// spawn users in GUI
 	// todo: this should alctually call add user function and pass login/password
@@ -134,13 +135,14 @@ window.bootlegger.admin.load_module = async function()
 
 window.bootlegger.admin.load_acl_list = async function()
 {
-	const allowance =  await window.bootlegger.core.py_get(
-		'admin/admin',
-		{
+	const allowance =  await window.bootlegger.core.py_cmd({
+		'module': 'admin/admin',
+		'rqt': 'get',
+		'prms': {
 			'action': 'load_access_list'
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	$('admin #access_list').empty();
 
 	try {
@@ -254,13 +256,14 @@ window.bootlegger.admin.save_user_profiles = async function()
 		payload[nick] = pswd;
 	}
 
-	const do_send = await window.bootlegger.core.py_send(
-		'admin/admin',
-		{
+	const do_send = await window.bootlegger.core.py_cmd({
+		'module': 'admin/admin',
+		'rqt': 'post',
+		'prms': {
 			'action': 'save_user_profiles'
 		},
-		JSON.stringify(payload, '\t', 4)
-	)
+		'payload': JSON.stringify(payload, '\t', 4)
+	})
 
 	print('Send result:', do_send)
 
@@ -336,14 +339,15 @@ window.bootlegger.admin.save_allowance_list = async function(usr)
 		}
 	}
 
-	const save_response = await window.bootlegger.core.py_send(
-		'admin/admin',
-		{
+	const save_response = await window.bootlegger.core.py_cmd({
+		'module': 'admin/admin',
+		'rqt': 'post',
+		'prms': {
 			'action': 'save_access_list'
 		},
-		JSON.stringify(acl),
-		'text'
-	)
+		'payload': JSON.stringify(acl),
+		'load_as': 'text'
+	})
 
 	print('Save allowance list:', save_response)
 }
@@ -373,13 +377,14 @@ window.bootlegger.admin.eval_match_name_hint = function()
 
 window.bootlegger.admin.load_folder_makers = async function()
 {
-	const teams = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const teams = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'list_matches_w_subroot'
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 
 	print('got teams', teams)
 
@@ -414,15 +419,16 @@ window.bootlegger.admin.spawn_match_struct = async function()
 		return
 	}
 	window.bootlegger.admin.selected_team_f = $('#foldmaker_pool .team.selected_team').attr('tmname')
-	const spawn_reply = await window.bootlegger.core.py_get(
-		'admin/admin',
-		{
+	const spawn_reply = await window.bootlegger.core.py_cmd({
+		'module': 'admin/admin',
+		'rqt': 'get',
+		'prms':	{
 			'action': 'spawn_match_struct',
 			'team': window.bootlegger.admin.selected_team_f,
 			'newfld': spawn_tgt
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	print(spawn_reply)
 	await window.bootlegger.admin.load_folder_makers()
 	// re-select the team

@@ -97,14 +97,15 @@ window.bootlegger.main_pool.list_dir = async function(path='.')
 	print('mpool load root dir')
 	window.bootlegger.main_pool.media_units_iteration.kill()
 
-	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'list_dir',
 			'target': path
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 
 	print(window.bootlegger.main_pool.dirlisting)
 }
@@ -154,14 +155,15 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 		var video_preview = window.bootlegger.main_pool.preview_cache_pull(vpath)
 		// if it does not exist in the registry - get the preview from the server
 		if (!video_preview){
-			var video_preview = await window.bootlegger.core.py_get(
-				'poolsys/poolsys',
-				{
+			var video_preview = await window.bootlegger.core.py_cmd({
+				'module': 'poolsys/poolsys',
+				'rqt': 'get',
+				'prms': {
 					'action': 'load_video_preview',
 					'video_path': vpath
 				},
-				'buffer'
-			)
+				'load_as': 'buffer'
+			})
 			// cache the result
 			window.bootlegger.main_pool.preview_cache_add(vpath, video_preview)
 		}
@@ -184,13 +186,14 @@ window.bootlegger.main_pool.spawn_video_unit = async function(vpath)
 			// important: resume the queue
 			// normally the client should not be allowed to do this
 			// but it doesnt matter really
-			window.bootlegger.core.py_get(
-				'poolsys/poolsys',
-				{
+			window.bootlegger.core.py_cmd({
+				'module': 'poolsys/poolsys',
+				'rqt': 'get',
+				'prms': {
 					'action': 'resume_q'
 				},
-				'text'
-			)
+				'load_as': 'text'
+			})
 
 			resolve(true)
 			return
@@ -276,14 +279,15 @@ window.bootlegger.main_pool.spawn_image_unit = async function(imgpath)
 
 		// else - load from server
 		if (!img_preview){
-			var img_preview = await window.bootlegger.core.py_get(
-				'poolsys/poolsys',
-				{
+			var img_preview = await window.bootlegger.core.py_cmd({
+				'module': 'poolsys/poolsys',
+				'rqt': 'get',
+				'prms': {
 					'action': 'load_image_preview',
 					'image_path': imgpath
 				},
-				'blob_url'
-			)
+				'load_as': 'blob_url'
+			})
 			window.bootlegger.main_pool.preview_cache_add(imgpath, img_preview)
 		}
 
@@ -405,14 +409,15 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 	window.bootlegger.main_pool.media_units_iteration.kill()
 	window.bootlegger.main_pool.media_units_iteration = window.bootlegger.main_pool.medialist_iterator()
 
-	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	window.bootlegger.main_pool.dirlisting = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'list_media',
 			'target': `${window.league}/${window.league_match}/${window.struct_fld}`
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 
 	// kill any existing iterators and spawn a new one
 	window.bootlegger.main_pool.media_units_iteration.kill()
@@ -446,14 +451,15 @@ window.bootlegger.main_pool.list_media = async function(elm='')
 window.bootlegger.main_pool.video_dl = async function(evt, elem)
 {
 	evt.preventDefault()
-	const dl_cmd = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const dl_cmd = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'get_dl_vid',
 			'target': elem.getAttribute('flpath')
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 
 	if (dl_cmd.status == 'lizard'){
 		window.open(dl_cmd.cmd)
@@ -497,14 +503,15 @@ window.bootlegger.main_pool.load_fullres_media = async function(elm)
 
 	$('body').append(tgt)
 
-	const fullres = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const fullres = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'load_fullres_pic',
 			'target': media_path
 		},
-		'blob_url'
-	)
+		'load_as': 'blob_url'
+	})
 
 	// print(fullres)
 	// Chrome still lags unlike firefox....
@@ -826,14 +833,15 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 	//
 
 	// for now solve this by making an extra request
-	const webm_state = await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const webm_state = await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'check_webm_status',
 			'vidpath': flpath
 		},
-		'json'
-	)
+		'load_as': 'json'
+	})
 	// if everything is ready then just go ahead
 	// important todo: the original system is obsolete now. There is duplicate code down below
 	if (webm_state.full != true){
@@ -868,23 +876,25 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 
 
 	// load video and audio
-	const webm_vid =  await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const webm_vid =  await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'get_webm',
 			'vidpath': flpath
 		},
-		'blob_url'
-	)
+		'load_as': 'blob_url'
+	})
 	// load video and audio
-	const webm_audio =  await window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	const webm_audio =  await window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'get_webm_audio',
 			'vidpath': flpath
 		},
-		'blob'
-	)
+		'load_as': 'blob'
+	})
 	print('Done loading webm shite', webm_vid, webm_audio, await webm_audio.text())
 
 
@@ -932,14 +942,15 @@ window.bootlegger.main_pool.open_webm_preview = async function(elm)
 
 window.bootlegger.main_pool.gen_webm_manually = function(fp)
 {
-	window.bootlegger.core.py_get(
-		'poolsys/poolsys',
-		{
+	window.bootlegger.core.py_cmd({
+		'module': 'poolsys/poolsys',
+		'rqt': 'get',
+		'prms': {
 			'action': 'generate_webm_preview',
 			'vidpath': fp
 		},
-		'text'
-	)
+		'load_as': 'text'
+	})
 	$('#webm_preview').remove()
 }
 
