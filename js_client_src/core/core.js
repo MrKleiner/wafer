@@ -1,8 +1,4 @@
 
-if (!window.bootlegger){window.bootlegger = {}};
-
-if (!window.bootlegger.core){window.bootlegger.core={}};
-
 // remappings
 window.print = console.log;
 
@@ -14,65 +10,17 @@ window.print = console.log;
 // window.localStorage.setItem('auth_token', '23849e61d01d323826345f22d6e0b3040d87b8c9d24ef7ad122ec805adac3590');
 
 
-
-//
-// presumable video preview / meta format:
-//
-
-// gigabin
-
-// -----------------------------
-// gigabin struct specification:
-// -----------------------------
-
-// First 7 bytes are strictly dedicated to the file format indication,
-// aka first 7 bytes are a string "gigabin"
-
-// Following 32 bytes are dedicated to the header size of the file in bytes
-// any unused space out of these 32 bytes is padded with !
-
-// Header is stored in the end of the entire file,
-// allowing modification of the content without rewriting the entire file
-
-// Header is a json encoded with Base64
-// Header format:
-// {
-// 	'stores': {
-// 		'filename': {
-// 			'type': 'solid',
-// 			'bits': [OFFSET_BYTES, LENGTH_BYTES, 'sha256 hash or null']
-// 		},
-// 		'filename2': [
-// 			'type': 'array',
-// 			'bits': [
-// 				[OFFSET_BYTES, LENGTH_BYTES, 'sha256 hash or null'],
-// 				[OFFSET_BYTES, LENGTH_BYTES, 'sha256 hash or null']
-// 				...
-// 			]
-// 		]
-// 	},
-// 	'version': gigabin_version, like 0.7,
-//	'total_size': 1 or null, (null by default)
-// 	'comment': ''
-// }
-
-// sha256 is null by default in both libraries
-
-// The rest of the file is a continous dump of bytes
-
-// gigabin is available as a library for javascript and python
-// The python version is the most efficient, since the entire fine doesn't has to be read
-
-
 const obj_url = (window.URL || window.webkitURL);
 
-const htbin = 'htbin_c'
+const htbin = 'htbin'
 
 //
 // applicable formats
 //
 
-window.bootlegger.core.allowed_vid = [
+// important todo: this has to be requested from server on load
+
+$this.allowed_vid = [
 	'mp4',
 	'mov',
 	'webm',
@@ -82,7 +30,7 @@ window.bootlegger.core.allowed_vid = [
 	'avi'
 ]
 
-window.bootlegger.core.allowed_img = [
+$this.allowed_img = [
 	'jpg',
 	'jpeg',
 	'jp2',
@@ -105,7 +53,7 @@ window.bootlegger.core.allowed_img = [
 	'hdr'
 ]
 
-window.bootlegger.core.allowed_img_special = [
+$this.allowed_img_special = [
 	'tga',
 	'psd',
 	'arw',
@@ -141,7 +89,7 @@ function closest_num_from_array(arr, goal=0)
 
 // load a specified system
 // does nothing if no system specified
-window.bootlegger.core.sysloader = async function(sysname=null, static=false)
+$this.sysloader = async function(sysname=null, static=false)
 {
 	// dont bother if invalid
 	if (!sysname){
@@ -150,7 +98,7 @@ window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 
 	// start loading...
 	return new Promise(async function(resolve, reject){
-		fetch(`panels/${sysname}.html`, {
+		fetch(`html_panels/${sysname}.html`, {
 			'headers': {
 				'accept': '*/*',
 				'cache-control': 'no-cache',
@@ -182,7 +130,7 @@ window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 	});
 }
 
-window.bootlegger.core.browser_detection_shite = function()
+$this.browser_detection_shite = function()
 {
 	// Get the user-agent string
 	let userAgentString = navigator.userAgent;
@@ -224,7 +172,7 @@ window.bootlegger.core.browser_detection_shite = function()
 }
 
 
-window.bootlegger.core.browser_detection = function()
+$this.browser_detection = function()
 {
 	// browser detect
 	var BrowserDetect = {
@@ -374,7 +322,7 @@ window.bootlegger.core.browser_detection = function()
 
 
 // important todo: don't do this on every click...
-window.bootlegger.core.browser_detection_smart = function(evt)
+$this.browser_detection_smart = function(evt)
 {
 	if (window.session_gotcha){return}
 
@@ -663,7 +611,7 @@ window.bootlegger.core.browser_detection_smart = function(evt)
 window.fades = []
 window.fades_rules = {}
 
-window.bootlegger.core.spawn_fades = function()
+$this.spawn_fades = function()
 {
 	const amt = 100;
 	// const step = 1.0 / amt;
@@ -696,15 +644,15 @@ window.bootlegger.core.spawn_fades = function()
 
 
 $(document).ready(function(){
-	window.bootlegger.core.spawn_fades()
-	window.bootlegger.core.browser_detection()
-	window.bootlegger.main_pool.module_loader();
-	window.bootlegger.core.profiler();
+	$this.spawn_fades()
+	$this.browser_detection()
+	$all.main_pool.module_loader();
+	$this.profiler();
 	// wtf_kill_js();
 });
 
 
-window.bootlegger.core.fadeout = async function(elem, duration=500)
+$this.fadeout = async function(elem, duration=500)
 {
 	const tgt = $(elem);
 	const entry = closest_num_from_array(window.fades, duration)
@@ -714,7 +662,7 @@ window.bootlegger.core.fadeout = async function(elem, duration=500)
 }
 
 
-window.bootlegger.core.display_fatal_error = async function(descr=null)
+$this.display_fatal_error = async function(descr=null)
 {
 	const err = $(`
 		<div class="gui_error">
@@ -729,14 +677,14 @@ window.bootlegger.core.display_fatal_error = async function(descr=null)
 
 	// hide the error
 	await wfsleep(5000)
-	window.bootlegger.core.fadeout(err, 600)
+	$this.fadeout(err, 600)
 }
 
 
 // prms: URL parameters to pass to the CGI script
 // as: treat response as text/json/buffer
 // returns json with response status and payload
-window.bootlegger.core.py_gets = async function(mod='', prms={}, load_as='text')
+$this.py_gets = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
@@ -814,7 +762,7 @@ window.bootlegger.core.py_gets = async function(mod='', prms={}, load_as='text')
 // prms: URL parameters to pass to the CGI script
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-window.bootlegger.core.py_sends = async function(mod='', prms={}, payload='', load_as='text')
+$this.py_sends = async function(mod='', prms={}, payload='', load_as='text')
 {
 	const rq_headers = {
 		'accept': '*/*',
@@ -887,7 +835,7 @@ window.bootlegger.core.py_sends = async function(mod='', prms={}, payload='', lo
 // rqt: rquest type (post/get)
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-// window.bootlegger.core.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
+// $this.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
 const pycmd_defaults = {
 	'module': '',
 	'rqt': 'post',
@@ -895,7 +843,7 @@ const pycmd_defaults = {
 	'payload': '',
 	'load_as': 'text'
 }
-window.bootlegger.core.py_cmd = async function(rprms={})
+$this.py_cmd = async function(rprms={})
 {
 	// overwrite defaults with new
 	const config = Object.assign({}, pycmd_defaults, rprms);
@@ -953,7 +901,7 @@ window.bootlegger.core.py_cmd = async function(rprms={})
 		// so, before treating response body - check for errors
 		if (response.headers.get('wafer-fatal-error') != null){
 			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.headers.get('wafer-fatal-error')}):`, await response.text())
-			window.bootlegger.core.display_fatal_error(response.headers.get('wafer-fatal-error'))
+			$this.display_fatal_error(response.headers.get('wafer-fatal-error'))
 			resolve(false)
 			return
 		}
@@ -1000,7 +948,7 @@ window.bootlegger.core.py_cmd = async function(rprms={})
 
 
 // determine whether the user is logged in or not
-window.bootlegger.core.profiler = function()
+$this.profiler = function()
 {
 	if (window.localStorage.getItem('auth_token')){
 		$('body').attr('logged_in', true)
@@ -1009,58 +957,7 @@ window.bootlegger.core.profiler = function()
 
 
 
-window.bootlegger.core.load_dbfile = function(flpath, load_as)
-{
-	return new Promise(function(resolve, reject){
-		fetch(`db/${flpath.strip('/')}`, {
-			'headers': {
-				'accept': '*/*',
-				'cache-control': 'no-cache',
-				'pragma': 'no-cache'
-			},
-			'method': 'GET',
-			'mode': 'cors',
-			'credentials': 'omit'
-		})
-		.then(async function(response) {
-			// console.log(response.status);
-			if (response.status == 404){
-				resolve('DB File load: File does not exist')
-				return
-			}
-
-			// todo: Just use response[GET AS]
-			// and require this function to take proper read as statements
-
-			// TEXT
-			if (load_as == 'text'){
-				resolve(await response.text())
-				return
-			}
-
-			// JSON
-			if (load_as == 'json'){
-				resolve(await response.json())
-				return
-			}
-
-			// buffer
-			if (load_as == 'buffer'){
-				resolve(await response.arrayBuffer())
-				return
-			}
-
-			resolve(await response.text())
-			return
-
-
-		});
-	});
-}
-
-
-
-window.bootlegger.core.file_to_bytes = async function(file, doblob=false)
+$this.file_to_bytes = async function(file, doblob=false)
 {
 	return new Promise(function(resolve, reject){
 		var reader = new FileReader();
@@ -1081,12 +978,12 @@ window.bootlegger.core.file_to_bytes = async function(file, doblob=false)
 
 async function wtf_kill_js()
 {
-	window.bootlegger.core.fsys_root = (await window.bootlegger.core.load_dbfile('root.json', 'json'))['root_path'];
+	$this.fsys_root = (await $this.load_dbfile('root.json', 'json'))['root_path'];
 }
 
 
 
-window.bootlegger.core.display_help = function()
+$this.display_help = function()
 {
 	$('#help_overlay').toggleClass('hidden');
 }

@@ -1,4 +1,8 @@
 
+if (!window.bootlegger){window.bootlegger = {}};
+
+if (!window.bootlegger.core){window.bootlegger.core={}};
+
 // remappings
 window.print = console.log;
 
@@ -68,7 +72,7 @@ const htbin = 'htbin_c'
 // applicable formats
 //
 
-$this.allowed_vid = [
+window.bootlegger.core.allowed_vid = [
 	'mp4',
 	'mov',
 	'webm',
@@ -78,7 +82,7 @@ $this.allowed_vid = [
 	'avi'
 ]
 
-$this.allowed_img = [
+window.bootlegger.core.allowed_img = [
 	'jpg',
 	'jpeg',
 	'jp2',
@@ -101,7 +105,7 @@ $this.allowed_img = [
 	'hdr'
 ]
 
-$this.allowed_img_special = [
+window.bootlegger.core.allowed_img_special = [
 	'tga',
 	'psd',
 	'arw',
@@ -137,7 +141,7 @@ function closest_num_from_array(arr, goal=0)
 
 // load a specified system
 // does nothing if no system specified
-$this.sysloader = async function(sysname=null, static=false)
+window.bootlegger.core.sysloader = async function(sysname=null, static=false)
 {
 	// dont bother if invalid
 	if (!sysname){
@@ -178,7 +182,7 @@ $this.sysloader = async function(sysname=null, static=false)
 	});
 }
 
-$this.browser_detection_shite = function()
+window.bootlegger.core.browser_detection_shite = function()
 {
 	// Get the user-agent string
 	let userAgentString = navigator.userAgent;
@@ -220,7 +224,7 @@ $this.browser_detection_shite = function()
 }
 
 
-$this.browser_detection = function()
+window.bootlegger.core.browser_detection = function()
 {
 	// browser detect
 	var BrowserDetect = {
@@ -370,7 +374,7 @@ $this.browser_detection = function()
 
 
 // important todo: don't do this on every click...
-$this.browser_detection_smart = function(evt)
+window.bootlegger.core.browser_detection_smart = function(evt)
 {
 	if (window.session_gotcha){return}
 
@@ -659,7 +663,7 @@ $this.browser_detection_smart = function(evt)
 window.fades = []
 window.fades_rules = {}
 
-$this.spawn_fades = function()
+window.bootlegger.core.spawn_fades = function()
 {
 	const amt = 100;
 	// const step = 1.0 / amt;
@@ -692,15 +696,15 @@ $this.spawn_fades = function()
 
 
 $(document).ready(function(){
-	$this.spawn_fades()
-	$this.browser_detection()
-	$all.main_pool.module_loader();
-	$this.profiler();
+	window.bootlegger.core.spawn_fades()
+	window.bootlegger.core.browser_detection()
+	window.bootlegger.main_pool.module_loader();
+	window.bootlegger.core.profiler();
 	// wtf_kill_js();
 });
 
 
-$this.fadeout = async function(elem, duration=500)
+window.bootlegger.core.fadeout = async function(elem, duration=500)
 {
 	const tgt = $(elem);
 	const entry = closest_num_from_array(window.fades, duration)
@@ -710,7 +714,7 @@ $this.fadeout = async function(elem, duration=500)
 }
 
 
-$this.display_fatal_error = async function(descr=null)
+window.bootlegger.core.display_fatal_error = async function(descr=null)
 {
 	const err = $(`
 		<div class="gui_error">
@@ -725,14 +729,14 @@ $this.display_fatal_error = async function(descr=null)
 
 	// hide the error
 	await wfsleep(5000)
-	$this.fadeout(err, 600)
+	window.bootlegger.core.fadeout(err, 600)
 }
 
 
 // prms: URL parameters to pass to the CGI script
 // as: treat response as text/json/buffer
 // returns json with response status and payload
-$this.py_gets = async function(mod='', prms={}, load_as='text')
+window.bootlegger.core.py_gets = async function(mod='', prms={}, load_as='text')
 {
 	print('Exec PY get')
 
@@ -810,7 +814,7 @@ $this.py_gets = async function(mod='', prms={}, load_as='text')
 // prms: URL parameters to pass to the CGI script
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-$this.py_sends = async function(mod='', prms={}, payload='', load_as='text')
+window.bootlegger.core.py_sends = async function(mod='', prms={}, payload='', load_as='text')
 {
 	const rq_headers = {
 		'accept': '*/*',
@@ -883,7 +887,7 @@ $this.py_sends = async function(mod='', prms={}, payload='', load_as='text')
 // rqt: rquest type (post/get)
 // payload: payload to send. Has to be proper shit and not raw objects
 // as: treat response as text/json/buffer
-// $this.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
+// window.bootlegger.core.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
 const pycmd_defaults = {
 	'module': '',
 	'rqt': 'post',
@@ -891,7 +895,7 @@ const pycmd_defaults = {
 	'payload': '',
 	'load_as': 'text'
 }
-$this.py_cmd = async function(rprms={})
+window.bootlegger.core.py_cmd = async function(rprms={})
 {
 	// overwrite defaults with new
 	const config = Object.assign({}, pycmd_defaults, rprms);
@@ -949,7 +953,7 @@ $this.py_cmd = async function(rprms={})
 		// so, before treating response body - check for errors
 		if (response.headers.get('wafer-fatal-error') != null){
 			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.headers.get('wafer-fatal-error')}):`, await response.text())
-			$this.display_fatal_error(response.headers.get('wafer-fatal-error'))
+			window.bootlegger.core.display_fatal_error(response.headers.get('wafer-fatal-error'))
 			resolve(false)
 			return
 		}
@@ -996,7 +1000,7 @@ $this.py_cmd = async function(rprms={})
 
 
 // determine whether the user is logged in or not
-$this.profiler = function()
+window.bootlegger.core.profiler = function()
 {
 	if (window.localStorage.getItem('auth_token')){
 		$('body').attr('logged_in', true)
@@ -1005,7 +1009,7 @@ $this.profiler = function()
 
 
 
-$this.file_to_bytes = async function(file, doblob=false)
+window.bootlegger.core.file_to_bytes = async function(file, doblob=false)
 {
 	return new Promise(function(resolve, reject){
 		var reader = new FileReader();
@@ -1026,12 +1030,12 @@ $this.file_to_bytes = async function(file, doblob=false)
 
 async function wtf_kill_js()
 {
-	$this.fsys_root = (await $this.load_dbfile('root.json', 'json'))['root_path'];
+	window.bootlegger.core.fsys_root = (await window.bootlegger.core.load_dbfile('root.json', 'json'))['root_path'];
 }
 
 
 
-$this.display_help = function()
+window.bootlegger.core.display_help = function()
 {
 	$('#help_overlay').toggleClass('hidden');
 }

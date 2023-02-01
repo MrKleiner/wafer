@@ -2,13 +2,15 @@
 # panzerfaust
 
 # despite large amount of code it only takes a few milliseconds per evaluation
+# and it's literally instant if "fore_each" is not activated
 def resolver(pth, rule, wannawrite=False):
 	declared = Path(rule['rule'])
 	tgt = Path(pth)
 
+	if not tgt.is_relative_to(declared):
+		return False
+
 	if rule['for_each']['use'] != True:
-		if not tgt.is_relative_to(declared):
-			return False
 
 		if rule['recursive'] != True and tgt.parent != declared:
 			# print('not recursive')
@@ -25,8 +27,8 @@ def resolver(pth, rule, wannawrite=False):
 	# inside = Path(rule['for_each']['inside'])
 	frh_depth = rule['for_each']['deep']
 
-	if not tgt.is_relative_to(declared):
-		return False
+	# if not tgt.is_relative_to(declared):
+	# 	return False
 
 	if tgt == declared:
 		if wannawrite == True:

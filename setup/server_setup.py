@@ -1,11 +1,12 @@
 from pathlib import Path
-import json, sqlite3, shutil, datetime, base64, hashlib, cgi, sys, os, socket
+import json, sqlite3, shutil, datetime, base64, hashlib, cgi, sys, os, socket, py_compile
 import subprocess as sp
 # from server_config import server_config
 # from htcompile import compile_server
 # import util
 
-server = Path(__file__).parent
+server = Path(__file__).absolute().parent.parent
+thisdir = Path(__file__).absolute().parent
 
 
 # The sane maximum size of a file stored within the system is about 24gb
@@ -38,7 +39,7 @@ server = Path(__file__).parent
 
 
 
-def run_setup():
+def run_setup(server_config):
 
 
 	serverdir = Path(__file__).absolute().parents[1]
@@ -281,13 +282,36 @@ def run_setup():
 
 if __name__ == '__main__':
 	incoming_info = json.loads(sys.stdin.buffer.read())
-	validate(incoming_info)
-	# run_setup()
 
-	# print('Content-Type: application/octet-stream\r\n\r\n')
+	sv_conf = {
+		'system_root':         incoming_info['ftp_root'],
+		'ffmpeg':              incoming_info['ffmpeg_path'],
+		'ffprobe':             incoming_info['ffprobe_path'],
+		'magix':               incoming_info['magix_path'],
+		'authdb':              incoming_info['authdb_path'],
+		'sysdb':               incoming_info['sysdb_path'],
+		'watchdogs_port':      incoming_info['watchdog_port'],
+		'upload_service_port': incoming_info['upload_service_port'],
+	}
+
+	conf_buffer = 'server_config = {'
+	for txtbased in ('system_root','ffmpeg','ffprobe','magix','authdb','sysdb',):
+		conf_buffer += f"""{txtbased} = '{sv_conf[txtbased]}'""" + '\n'
+
+	conf_buffer += f"""watchdogs_port = {sv_conf['watchdogs_port']}""" + '\n'
+	conf_buffer += f"""upload_service_port = {sv_conf['watchdogs_port']}""" + '\n'
+	conf_buffer += '}'
+
+	src_config_py = thisdir / 'server_cfg.py'
+	src_config_py.write_text(sv_conf)
+
+	py_compile.compile(str(src_config_py), cfile='server_config.pyc')
+	src_config_py.unlink()
+	shutil.copy(src_config_py.with_suffix('.pyc'), server / 'htbin' / 'server_config.pyc')
+
+	print('Content-Type: application/octet-stream\r\n\r\n')
 	# print('fuckoff')
-
-
+	run_setup(sv_conf)
 
 
 

@@ -22,7 +22,3 @@ def compile_server():
 		if not pyfile.name in ('server_config.py', 'server_setup.py', 'factory_reset.py'):
 			# compile the file
 			compiled = py_compile.compile(str(tgt_dest))
-
-
-if __name__ == '__main__':
-	compile_server()
