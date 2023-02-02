@@ -115,7 +115,7 @@ main .param_row .err
 
 #execute_setup.exec_locked
 {
-	pointer-events: none;
+	pointer-events: none !important;
 	cursor: default;
 	filter: grayscale(1);
 }

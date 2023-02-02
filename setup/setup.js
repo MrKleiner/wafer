@@ -1,8 +1,8 @@
 
 
-
-
-
+document.addEventListener('change', tr_event => {
+	validate()
+});
 
 
 async function validate(){
@@ -51,11 +51,23 @@ async function validate(){
 
 	if (decision[0] == true){
 		$('#execute_setup').removeClass('exec_locked')
+		window.wafer_data = pl
 	}
 }
 
 
+async function exec_setup()
+{
+	const response = await fetch('./server_setup.py', {
+		'method': 'POST',
+		'body': window.wafer_data,
+		'mode': 'cors',
+		'credentials': 'omit'
+	})
+	const decision = await response.text()
 
+	print(decision)
+}
 
 
 

@@ -54,8 +54,8 @@ tree_copy(project / 'js_client', release_dir_web)
 tree_copy(project / 'js_client', release_dir_web_win)
 
 # copy htbin (python scripts)
-tree_copy(project / 'htbin', release_dir_web)
-tree_copy(project / 'htbin', release_dir_web_win)
+tree_copy(project / 'htbin_src', release_dir_web)
+tree_copy(project / 'htbin_src', release_dir_web_win)
 
 # copy setup dir
 tree_copy(project / 'setup', release_dir_web)

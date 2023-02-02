@@ -1,14 +1,16 @@
 from pathlib import Path
 import json, sqlite3, shutil, datetime, base64, hashlib, cgi, sys, os, socket, py_compile
 import subprocess as sp
-# from server_config import server_config
-# from htcompile import compile_server
-# import util
 
-server = Path(__file__).absolute().parent.parent
+server = Path(__file__).absolute().parents[1]
 thisdir = Path(__file__).absolute().parent
 
+sys.path.append(str(server.parent / 'w_sys' / 'p_mods'))
+sys.path.append(str(server))
 
+import htbin_src.wafer_util as util
+from json_compile import compile_json
+from htcompile import compile_server
 # The sane maximum size of a file stored within the system is about 24gb
 # Please use torrents for anything above this number
 
@@ -25,24 +27,7 @@ thisdir = Path(__file__).absolute().parent
 # enjoy
 
 
-
-
-
-
-# This script will set the server up before you can use it
-# It's fine that this script is in the htbin directory,
-# running it twice doesn't do anything and users cannot overload the system by randomly calling it
-# (there are way more efficient and obvious ways of crashing/abusing/raping this poor system)
-
-
-
-
-
-
 def run_setup(server_config):
-
-
-	serverdir = Path(__file__).absolute().parents[1]
 
 	print('Running setup...')
 
@@ -266,23 +251,49 @@ def run_setup(server_config):
 
 
 	#
-	# Finally, compile the server
+	# Finally, compile the server to .pyc
 	#
 
-	compile_server()
-
-
+	compile_server(server)
 
 
 	print('Setup done')
 
 
+#
+# Setup:
+#
 
+# Write down config file to the htbin with:
+# 	system_root
+# 	ffmpeg
+# 	ffprobe
+# 	magix
+# 	authdb
+# 	sysdb
+# 	watchdogs_port
+# 	upload_service_port
+
+# create requred db files and folders
+
+# compile htbin_src to htbin with .pyc files inside
+
+# Delete index.html in the web dir
+# Move main.html from html_panels to server root with the name index.html
+
+# IF the bins folder is present in the root dir of the system - unpack required files
+
+# Delete the setup dir in the web root
 
 
 if __name__ == '__main__':
+	print('Content-Type: application/octet-stream\r\n\r\n')
+
+	# Get incoming payload with all the params
 	incoming_info = json.loads(sys.stdin.buffer.read())
 
+	# Remap some names
+	# todo: get rid of this remapping ?
 	sv_conf = {
 		'system_root':         incoming_info['ftp_root'],
 		'ffmpeg':              incoming_info['ffmpeg_path'],
@@ -294,26 +305,22 @@ if __name__ == '__main__':
 		'upload_service_port': incoming_info['upload_service_port'],
 	}
 
-	conf_buffer = 'server_config = {'
-	for txtbased in ('system_root','ffmpeg','ffprobe','magix','authdb','sysdb',):
-		conf_buffer += f"""{txtbased} = '{sv_conf[txtbased]}'""" + '\n'
+	# Write down config file to the htbin.
+	# This will be the config read by the server on EACH incoming request
+	# reading and evaluating json files is 3 times slower than importing compiled python code
+	# compile the incoming json into a .pyc file
+	compile_json(sv_conf, server / 'htbin' / 'server_config.pyc')
 
-	conf_buffer += f"""watchdogs_port = {sv_conf['watchdogs_port']}""" + '\n'
-	conf_buffer += f"""upload_service_port = {sv_conf['watchdogs_port']}""" + '\n'
-	conf_buffer += '}'
-
-	src_config_py = thisdir / 'server_cfg.py'
-	src_config_py.write_text(sv_conf)
-
-	py_compile.compile(str(src_config_py), cfile='server_config.pyc')
-	src_config_py.unlink()
-	shutil.copy(src_config_py.with_suffix('.pyc'), server / 'htbin' / 'server_config.pyc')
-
-	print('Content-Type: application/octet-stream\r\n\r\n')
-	# print('fuckoff')
+	# Compile htbin_src to htbin with .pyc files inside
 	run_setup(sv_conf)
 
+	# Delete index.html in the web dir
+	# Move main.html from html_panels to server root with the name index.html
+	(server / 'index.html').unlink(missing_ok=True)
+	shutil.move(server / 'html_panels' / 'main.html', server / 'index.html')
 
+	# Delete the setup dir in the web root
+	shutil.rmtree(server / 'setup')
 
 
 

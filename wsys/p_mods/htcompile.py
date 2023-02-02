@@ -1,24 +1,23 @@
 
 
-
-def compile_server():
+def compile_server(srv):
 	import py_compile, shutil
 	from pathlib import Path
 
-	thisdir = Path(__file__).absolute().parents[1]
+	server_dir = Path(srv)
 
-	if (thisdir / 'htbin_c').is_dir():
-		shutil.rmtree(str(thisdir / 'htbin_c'))
-	(thisdir / 'htbin_c').mkdir(exist_ok=True)
+	if (server_dir / 'htbin').is_dir():
+		shutil.rmtree(server_dir / 'htbin')
+	(server_dir / 'htbin').mkdir(exist_ok=True)
 
-	for pyfile in (thisdir / 'htbin').rglob('*.py'):
-		src_file = pyfile.relative_to(thisdir / 'htbin')
+	for pyfile in (server_dir / 'htbin_src').rglob('*.py'):
+		src_file = pyfile.relative_to(server_dir / 'htbin')
 
-		tgt_dest = thisdir / 'htbin_c' / src_file
+		tgt_dest = server_dir / 'htbin' / src_file
 
 		if not tgt_dest.parent.is_dir():
-			tgt_dest.parent.mkdir(parents=True)
+			tgt_dest.parent.mkdir(parents=True, exist_ok=True)
 
-		if not pyfile.name in ('server_config.py', 'server_setup.py', 'factory_reset.py'):
+		# if not pyfile.name in ('server_config.py', 'server_setup.py', 'factory_reset.py'):
 			# compile the file
-			compiled = py_compile.compile(str(tgt_dest))
+		py_compile.compile(str(tgt_dest), cfile=pyfile.name.with_suffix('.pyc'))
