@@ -1,0 +1,64 @@
+{
+	"click": [
+		{
+			"selector": "#app_topbar #nav_login",
+			"function": "window.bootlegger.login.load_module",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "#app_topbar #nav_sign_out",
+			"function": "window.bootlegger.login.logout",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "#app_topbar #nav_enter_edit",
+			"function": "window.bootlegger.admin.load_module",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "#app_topbar #nav_go_home",
+			"function": "window.bootlegger.main_pool.home_button",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "#app_topbar #nav_display_help, #help_overlay",
+			"function": "window.bootlegger.core.display_help",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		},
+		{
+			"selector": "lzdropdown .lz_menu_entries [dropdown_set]",
+			"function": "lzdrops.set_active",
+			"pass_event": false,
+			"pass_element": true,
+			"pass_params": ""
+		},
+		{
+			"selector": "[haslizdropdown], lzdropdown",
+			"function": "lzdrops.showhide",
+			"pass_event": false,
+			"pass_element": true,
+			"pass_params": "",
+			"else": "lzdrops.showhide"
+		},
+
+
+
+		{
+			"selector": "body",
+			"function": "window.bootlegger.core.browser_detection_smart",
+			"pass_event": true,
+			"pass_element": false,
+			"pass_params": ""
+		}
+	]
+}

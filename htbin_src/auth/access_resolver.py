@@ -2,9 +2,12 @@
 # panzerfaust
 
 # despite large amount of code it only takes a few milliseconds per evaluation
-# and it's literally instant if "fore_each" is not activated
-def resolver(pth, rule, wannawrite=False):
+# and it's literally instant if "fore_each" is not activated for the target rule
+def resolver(Path, pth, rule, wannawrite=False):
+	# todo: don't call Path(). Simply require this function to take Path by default
 	declared = Path(rule['rule'])
+	# tgt = Path(pth).resolve()
+	# todo: this is an extreme security risk
 	tgt = Path(pth)
 
 	if not tgt.is_relative_to(declared):

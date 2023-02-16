@@ -65,6 +65,16 @@ tree_copy(project / 'setup', release_dir_web_win)
 tree_copy(project / 'wsys', release_dir)
 tree_copy(project / 'wsys', release_dir_win)
 
+# copy wafer_util from wsys to htbin_src
+shutil.copy(project / 'wsys' / 'p_mods' / 'wafer_util.py', release_dir_web / 'htbin_src')
+shutil.copy(project / 'wsys' / 'p_mods' / 'wafer_util.py', release_dir_web_win / 'htbin_src')
+
+# copy lstruct shit
+lstruct = Path(conf['lstruct']).read_text().split('# @\n# Rubbish split\n# @')[0].strip()
+(release_dir / 'wsys' / 'p_mods' / 'lightstruct.py').write_text(lstruct)
+(release_dir_win / 'wsys' / 'p_mods' / 'lightstruct.py').write_text(lstruct)
+
+
 # copy setup html to the root with the name "index.html"
 shutil.copy(project / 'setup' / 'setup.html', release_dir_web / 'index.html')
 shutil.copy(project / 'setup' / 'setup.html', release_dir_web_win / 'index.html')

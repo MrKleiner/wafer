@@ -12,6 +12,7 @@ server = server()
 
 
 # This is responsible for precessing the media preview generation queue
+# Obsolete
 class mqueue:
 	def __init__(self):
 
@@ -183,7 +184,7 @@ class poolsys:
 	def __init__(self):
 		# import json
 		# from pathlib import Path
-		self.mediaq = mqueue()
+		# self.mediaq = mqueue()
 
 
 	def list_dir(self):
@@ -193,7 +194,7 @@ class poolsys:
 
 		matches = []
 
-		for match in (server.ftp_root / Path(server.prms['target'])).glob('*'):
+		for match in (server.ftp_root / Path(server.prms['target']).resolve(strict=False)).glob('*'):
 
 			# admins are allowed to view anything
 			if not server.wfauth.resolve_path(match) and not server.wfauth.isadmin:

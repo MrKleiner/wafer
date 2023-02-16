@@ -6,18 +6,20 @@ document.addEventListener('change', tr_event => {
 
 
 async function validate(){
-	$('#execute_setup').addClass('exec_locked')
-	$('main .param_row').removeClass('row_ok row_ded')
-	$('main .param_row .err').text('')
-	$('main .param_row .warn').text('')
+	$('#execute_setup').addClass('exec_locked');
+	$('main .param_row').removeClass('row_ok row_ded');
+	$('main .param_row .err').text('');
+	$('main .param_row .warn').text('');
 	const collected = {};
-	const collision = []
+	const collision = [];
 	for (let prmr of document.querySelectorAll('main .param_row')){
 		// console.log(prmr.id)
 		inp = $(prmr).find('input')
 		inp_val = inp.val().trim()
+
+		collected[prmr.id] = (inp_val != '') ? inp_val : null
+
 		if (inp_val != ''){
-			collected[prmr.id] = inp_val
 			if (collision.includes(inp_val)){
 				$('main .param_row .err').text('Collision in file paths/port numbers detected (this means there are two identical paths/ports somewhere)')
 				return

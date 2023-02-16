@@ -4,113 +4,54 @@ import subprocess as sp
 
 cgitb.enable()
 
+
 def is_port_in_use(port):
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 		return s.connect_ex(('localhost', port)) == 0
 
-
-def validate_ftp_root(tgt_path):
-	tgt_path = Path(tgt_path)
+def validate_path(p):
+	tgt_path = Path(p)
 	if not tgt_path.is_dir() or tgt_path == Path('.'):
-		return 'This directory does not exist'
+		return False
 	else:
 		return True
 
-
-def validate_ffmpeg(tgt_path):
+def validate_output(tgt_path, cmd, search):
 	tgt_path = Path(tgt_path)
 	if not tgt_path.is_file():
 		return 'The specified file does not exist'
 	try:
-		ffmpeg_prms = [
+		exec_prms = [
 			str(tgt_path),
-			'-version'
+			cmd
 		]
 
-		mpeg = None
-		with sp.Popen(ffmpeg_prms, stdout=sp.PIPE, bufsize=10**8) as mpeg_pipe:
-			mpeg = mpeg_pipe.stdout.read()
+		exec_echo = None
+		with sp.Popen(exec_prms, stdout=sp.PIPE, bufsize=10**8) as exec_pipe:
+			exec_echo = exec_pipe.stdout.read()
 
 		# if mpeg == None or not b'version' in mpeg.lower() or not b'ffmpeg' in mpeg.lower():
-		if not b'ffmpeg version' in mpeg.lower():
-			return 'The specified file does not look like ffmpeg'
+		if not search.encode() in exec_echo.lower():
+			return False
 	except Exception as e:
-		return 'The specified file does not look like ffmpeg'
+		return False
 
 	return True
 
 
-def validate_ffprobe(tgt_path):
-	tgt_path = Path(tgt_path)
-	if not tgt_path.is_file():
-		return 'The specified file does not exist'
-	try:
-		ffprobe_prms = [
-			str(tgt_path),
-			'-version'
-		]
-
-		probe = b''
-		with sp.Popen(ffprobe_prms, stdout=sp.PIPE, bufsize=10**8) as probe_pipe:
-			probe = probe_pipe.stdout.read()
-
-		if not b'version' in probe.lower() or not b'ffprobe' in probe.lower():
-			return 'The specified file does not look like ffprobe'
-	except Exception as e:
-		return 'The specified file does not look like ffprobe'
 
 
-	return True
 
 
-def validate_magix(tgt_path):
-	tgt_path = Path(tgt_path)
-	if not tgt_path.is_file():
-		return 'The specified file does not exist'
-	try:
-		magix_prms = [
-			str(tgt_path),
-			'-version'
-		]
-
-		magix = b''
-		with sp.Popen(magix_prms, stdout=sp.PIPE, bufsize=10**8) as magix_pipe:
-			magix = magix_pipe.stdout.read()
-
-		if not b'version' in magix.lower() or not b'magick' in magix.lower():
-			return 'The specified file does not look like ImageMagick'
-	except Exception as e:
-		return 'The specified file does not look like ImageMagick'
 
 
-	return True
-
-def validate_auth_db(tgt_path):
-	tgt_path = Path(tgt_path)
-	if not tgt_path.parent.is_dir() or tgt_path.parent == Path('.'):
-		return 'The parent dir of the specified dir does not exist'
-	else:
-		return True
-
-def validate_sys_db(tgt_path):
-	tgt_path = Path(tgt_path)
-	if not tgt_path.parent.is_dir() or tgt_path.parent == Path('.'):
-		return 'The parent dir of the specified dir does not exist'
-	else:
-		return True
-
-def validate_watchdog_port(prt):
-	return not is_port_in_use(int(prt))
-
-def validate_upl_sys_port(prt):
-	return not is_port_in_use(int(prt))
 
 def validate(inf):
-	
+	"""
 	vdict = {
-		'ftp_root': validate_ftp_root,
-		'ffmpeg_path': validate_ffmpeg,
-		'ffprobe_path': validate_ffprobe,
+		'ftp_root': validate_path,
+		'ffmpeg_path': validate_output,
+		'ffprobe_path': validate_output,
 		'magix_path': validate_magix,
 		'authdb_path': validate_auth_db,
 		'sysdb_path': validate_sys_db,
@@ -125,8 +66,64 @@ def validate(inf):
 			validated[v] = vdict[v](inf[v])
 			if validated[v] == False:
 				has_err = True
+	"""
 
-	return [(len(validated) == len(vdict)) and not has_err, validated]
+
+
+
+	port_validation = (
+		'watchdog_port',
+		'upload_service_port',
+	)
+
+	echo_validation = (
+		('ffmpeg_path', '-version', 'ffmpeg version', """This doesn't look like ffmpeg"""),
+		('ffprobe_path', '-version', 'ffprobe version', """This doesn't look like ffprobe"""),
+		('magix_path', '-version', 'version: imagemagick', """This doesn't look like Image Magick"""),
+	)
+
+	path_validation = (
+		'ftp_root',
+		'authdb_path',
+		'sysdb_path',
+	)
+
+	validated = {}
+	has_err = False
+
+	# port validation
+	for p_vl in port_validation:
+		if inf.get(p_vl):
+			decision = not is_port_in_use(int(inf[p_vl]))
+			# validated[p_vl] = decision
+			if decision:
+				validated[p_vl] = True
+			else:
+				validated[p_vl] = 'This port is occupied already'
+				has_err = True
+
+	# echo validation
+	for e_vl in echo_validation:
+		if inf.get(e_vl[0]):
+			decision = validate_output(inf[e_vl], e_vl[1], e_vl[2])
+			if decision:
+				validated[e_vl] = True
+			else:
+				validated[e_vl] = e_vl[3]
+				has_err = True
+
+	# path validation
+	for pa_vl in path_validation:
+		if inf.get(pa_vl):
+			decision = validate_path(inf[pa_vl])
+			if decision:
+				validated[pa_vl] = True
+			else:
+				validated[pa_vl] = 'This path is invalid'
+				has_err = True
+
+
+	return [has_err, validated]
 
 
 

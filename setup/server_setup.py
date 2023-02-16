@@ -241,7 +241,7 @@ def run_setup(server_config):
 	# and re-create the dir
 	sysdb_root.mkdir(exist_ok=True)
 	# create required folders
-	(sysdb_root / 'journal').mkdir()
+	(sysdb_root / 'redundancy_list').mkdir()
 	(sysdb_root / 'preview_queue').mkdir()
 	(sysdb_root / 'previews').mkdir()
 	(sysdb_root / 'cgi_err').mkdir()
@@ -295,14 +295,15 @@ if __name__ == '__main__':
 	# Remap some names
 	# todo: get rid of this remapping ?
 	sv_conf = {
-		'system_root':         incoming_info['ftp_root'],
-		'ffmpeg':              incoming_info['ffmpeg_path'],
-		'ffprobe':             incoming_info['ffprobe_path'],
-		'magix':               incoming_info['magix_path'],
-		'authdb':              incoming_info['authdb_path'],
-		'sysdb':               incoming_info['sysdb_path'],
-		'watchdogs_port':      incoming_info['watchdog_port'],
-		'upload_service_port': incoming_info['upload_service_port'],
+		'system_root':         incoming_info.get('ftp_root'),
+		'ffmpeg':              incoming_info.get('ffmpeg_path'),
+		'ffprobe':             incoming_info.get('ffprobe_path'),
+		'magix':               incoming_info.get('magix_path'),
+		'authdb':              incoming_info.get('authdb_path'),
+		'sysdb':               incoming_info.get('sysdb_path'),
+		# todo: oh cmon, should this shit be strict or not ????
+		'watchdogs_port':      int(incoming_info.get('watchdog_port')),
+		'upload_service_port': int(incoming_info.get('upload_service_port')),
 	}
 
 	# Write down config file to the htbin.
@@ -311,7 +312,7 @@ if __name__ == '__main__':
 	# compile the incoming json into a .pyc file
 	compile_json(sv_conf, server / 'htbin' / 'server_config.pyc')
 
-	# Compile htbin_src to htbin with .pyc files inside
+	# Run the setup
 	run_setup(sv_conf)
 
 	# Delete index.html in the web dir

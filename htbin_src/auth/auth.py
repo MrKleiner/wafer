@@ -122,12 +122,12 @@ class wfauth:
 	def request_admin(self):
 		if not self.isadmin:
 			self.srv.fatal_error('need_admin')
-			self.srv.flush_json({'status': '1809246/hobo'})
+			self.srv.flush_json({'status': '1809246/hobo', 'details': 'Not enough privileges'})
 
 	def reject_guest(self):
 		if self.guest == True:
 			self.srv.fatal_error('guest_disallowed')
-			self.srv.flush_json({'status': '1809246/hobo', 'details': 'Guests are disallowed toexecute this action'})
+			self.srv.flush_json({'status': '1809246/hobo', 'details': 'Guests are disallowed executing this action'})
 
 
 	# allow using provided userid by validating the JWT

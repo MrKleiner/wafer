@@ -1,0 +1,11 @@
+{
+	"click": [
+		{
+			"selector": "login #intrusion",
+			"function": "window.bootlegger.login.intrusion",
+			"pass_event": false,
+			"pass_element": false,
+			"pass_params": ""
+		}
+	]
+}

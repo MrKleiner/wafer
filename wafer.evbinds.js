@@ -65,15 +65,6 @@ document.addEventListener('click', tr_event => {
 	if (event.target.closest('#list_grid_switch #show_as_grid')){window.bootlegger.main_pool.set_flist_view_type('grid')}
 
 
-
-
-	// ==========================================
-	// 	sys_chooser syschoser
-	// ==========================================
-
-	if (event.target.closest('syschoose #sysc_vids')){window.bootlegger.vidman.load_module()}
-
-
 });
 
 

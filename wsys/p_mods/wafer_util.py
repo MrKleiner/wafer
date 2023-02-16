@@ -112,3 +112,15 @@ def generate_token(do_long=False, bias=1):
 	else:
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(64*bias))]), 'sha256')
 
+
+
+
+def sp_popen(exec_args):
+	import subprocess as sp
+
+	outp_data = None
+	with sp.Popen(exec_args, stdout=sp.PIPE, bufsize=10**8) as sp_data_pipe:
+		outp_data = sp_data_pipe.stdout.read()
+
+	return outp_data
+
