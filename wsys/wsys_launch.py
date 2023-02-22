@@ -19,19 +19,13 @@ from pathlib import Path
 import p_mods.wafer_sys
 thisdir = Path(__file__).parent.absolute()
 sys.path.append(str(thisdir.parent / 'web' / 'htbin'))
-from server_config import data as srv_cfg
+# from server_config import data as srv_cfg
 
 
 
+wafer_config_ctrl = wafer_sys.wfcfg_ctrl(thisdir / 'sysc', thisdir.parent)
 
-
-
-
-
-
-
-
-
+wafer_sys_util = wafer_sys.wf_sys_util(wafer_config_ctrl)
 
 
 

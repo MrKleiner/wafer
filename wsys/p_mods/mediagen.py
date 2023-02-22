@@ -14,6 +14,7 @@ class media_gen:
 		actions = {
 			'img': self.generate_pic_preview,
 		}
+
 		# Execute corresponding action
 		actions[task]()
 

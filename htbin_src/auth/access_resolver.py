@@ -1,6 +1,8 @@
 
 # panzerfaust
 
+# todo: make this return False by default
+
 # despite large amount of code it only takes a few milliseconds per evaluation
 # and it's literally instant if "fore_each" is not activated for the target rule
 def resolver(Path, pth, rule, wannawrite=False):
@@ -8,6 +10,7 @@ def resolver(Path, pth, rule, wannawrite=False):
 	declared = Path(rule['rule'])
 	# tgt = Path(pth).resolve()
 	# todo: this is an extreme security risk
+	# because if the target path was not resolved, then this will let anyone view anything
 	tgt = Path(pth)
 
 	if not tgt.is_relative_to(declared):
@@ -20,6 +23,7 @@ def resolver(Path, pth, rule, wannawrite=False):
 			return False
 
 		if wannawrite == True:
+			# todo: this doesn't make any sense, just return the ['write'] param
 			if rule['write'] == True:
 				return True
 			else:

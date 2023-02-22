@@ -2,6 +2,8 @@ import sys
 sys.path.append('..')
 from server import server, md_actions
 server = server()
+# reject non-admin users immediately
+server.wfauth.request_admin()
 
 # codes:
 # 1809246
@@ -10,14 +12,14 @@ server = server()
 # 10092007
 
 
+
 # this entire class requires admin
 class user_ctrl:
 	"""User control, like password control and account creation"""
 
 	# init usually means auth
 	def __init__(self):
-		# reject non-admin users immediately
-		server.wfauth.request_admin()
+		self.pootis = 'a'
 
 
 	# load users database

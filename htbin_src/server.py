@@ -1,6 +1,4 @@
 
-# Documentation
-# 
 
 
 
@@ -13,70 +11,44 @@
 
 
 
-class fjournal:
-	"""a file watcher"""
-	# srv = server variable
+class wafer_redundancy_journal:
+
+	# srv = reference to the server class
 	def __init__(self, srv):
+		import datetime
+		self.datetime = datetime.datetime
+		self.timedelta = datetime.timedelta
 		self.Path = srv.Path
-		self.jdb = srv.sysdb_path / 'journal'
+		self.jdir = srv.sysdb_path / 'redundancy_list'
 		self.srv = srv
-		# ensure that the journal folder exists
-		# todo: this is not needed anymore with the new system
-		self.jdb.mkdir(exist_ok=True)
 
 	# takes the path to the file and the life length
 	# life in hours
 	# overwrites previous record, if any
 	# important todo: choose whether to overwrite or no
 	def reg_file(self, flpath, life=5):
-		json = self.srv.json
-		from datetime import datetime, timedelta
+		dtm = self.datetime
+		tdelta = self.timedelta
 
-		flpath = self.Path(flpath)
-		jr_index = self.srv.util.eval_hash(str(flpath), 'sha256')
-		jr_tgt = self.jdb / f'{jr_index}.jr'
+		flpath = str(self.Path(flpath).resolve()).rstrip('/')
 
-		jr_tgt.write_bytes(b'')
+		record = {
+			'expiration_date': str(dtm.now() + tdelta(hours=int(life))),
+			'target': flpath,
+		}
 
-		tm = (datetime.now() + timedelta(hours=int(life))).timetuple()
+		record_id = self.srv.util.eval_hash(flpath, 'sha256')
 
-		# todo: why bother with this shit when there's json
-		# the only advantage of this is that it's PROBABLY a few milliseconds faster...
-		with open(str(jr_tgt), 'ab') as j:
-			# first line represents timestamp when to delete
-			j.write('-'.join([str(tm.tm_year), str(tm.tm_mon), str(tm.tm_mday), str(tm.tm_hour)]).encode())
-			j.write('\n'.encode())
-			# second line represents file path to delete
-			j.write(str(flpath).encode())
+		(self.jdir / f'{record_id}.jr').write_text(self.srv.json.dumps(record))
+
 
 	# manually remove a journal entry
 	def unreg_file(self, flpath):
-		tgt_unreg = self.Path(flpath)
-		unreg_index = self.srv.util.eval_hash(str(flpath), 'sha256')
-		(self.jdb / f'{unreg_index}.jr').unlink(missing_ok=True)
+		tgt_unreg = str(self.Path(flpath).resolve()).rstrip('/')
+		unreg_id = self.srv.util.eval_hash(str(flpath), 'sha256')
+		(self.jdir / f'{unreg_index}.jr').unlink(missing_ok=True)
 
 
-	# go through every journal file...
-	# todo: create prefixed type which says that every file with this prefix has to be deleted
-	def process_jr(self):
-		from datetime import datetime
-		Path = self.srv.Path
-
-		for jf in self.jdb.glob('*.jr'):
-			try:
-				# read file contents
-				jdata = jf.read_text().split('\n')
-
-				# if the date is older than now - delete the target file
-				fl_date = datetime.strptime(jdata[0], '%Y-%m-%d-%H')
-				now_date = datetime.now()
-				# delete target file
-				if fl_date < now_date:
-					Path(jdata[1]).unlink(missing_ok=True)
-					# delete the task
-					jf.unlink(missing_ok=True)
-			except Exception as e:
-				continue
 
 
 # server has the following stuff:
@@ -204,6 +176,9 @@ class server:
 		# util functions from the util.py file
 		self.util = wafer_util
 
+		# journal is not always needed
+		self._journal = None
+
 		# also make cgitb write errors to files
 		cgitb.enable(format='text', logdir=str(self.sysdb_path / 'cgi_err'))
 
@@ -295,8 +270,11 @@ class server:
 
 
 	# journal which keeps track of files to delete
+	@property
 	def journal(self):
-		return fjournal(self)
+		if not self._journal:
+			self._journal = wafer_redundancy_journal(self)
+		return 
 
 
 	def bin_as_json(self):

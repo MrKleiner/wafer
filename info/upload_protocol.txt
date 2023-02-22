@@ -13,7 +13,7 @@ The base concept is very simple:
 			and this file acts as a temp buffer where these chunks are being put.
 
 		"Info object" means:
-
+			A json containing various info about the upload session.
 
 		The server receives a request, which says that user wants to upload a certain file somewhere.
 		The request could be done either through simple HTTP, or WebSockets.

@@ -194,7 +194,6 @@ class uploadsys:
 			'chunk_size': server.prms['chunk_size'],
 			'declared_chunk_count': server.prms['declared_chunks'],
 			'last_chunk_index': 0,
-			'last_full_hash': None
 		}
 
 		# now create the database record
@@ -212,7 +211,7 @@ class uploadsys:
 			str(target_dest),
 			datetime.datetime.now(),
 			info_object['upload_token'],
-			server.prms['declared_hash']
+			server.prms['declared_hash'],
 		)
 		cursor_obj.execute(params, data_tuple)
 		connection.commit()
