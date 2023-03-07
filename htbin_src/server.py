@@ -9,18 +9,25 @@
 
 
 
-
-
 class wafer_redundancy_journal:
 
-	# srv = reference to the server class
-	def __init__(self, srv):
+	def __init__(self, rlist_path, wfutil, pathlib=None, json=None):
 		import datetime
 		self.datetime = datetime.datetime
 		self.timedelta = datetime.timedelta
-		self.Path = srv.Path
-		self.jdir = srv.sysdb_path / 'redundancy_list'
-		self.srv = srv
+
+		# important todo: these two checks bring chaos, confusion and waste time 
+		if not pathlib:
+			from pathlib import Path
+			pathlib = Path
+		if not json:
+			import json
+
+		self.Path = pathlib
+		self.json = json
+		self.jdir = self.Path(rlist_path)
+		self.wfutil = wfutil
+		# self.srv = srv
 
 	# takes the path to the file and the life length
 	# life in hours
@@ -30,23 +37,25 @@ class wafer_redundancy_journal:
 		dtm = self.datetime
 		tdelta = self.timedelta
 
-		flpath = str(self.Path(flpath).resolve()).rstrip('/')
+		flpath = str(self.Path(flpath).as_posix()).strip('/')
 
 		record = {
-			'expiration_date': str(dtm.now() + tdelta(hours=int(life))),
+			'expiration_date': (dtm.now() + tdelta(hours=int(life))).isoformat(),
 			'target': flpath,
 		}
 
-		record_id = self.srv.util.eval_hash(flpath, 'sha256')
+		record_id = self.wfutil.eval_hash(flpath, 'sha256')
 
-		(self.jdir / f'{record_id}.jr').write_text(self.srv.json.dumps(record))
+		print(flpath, record_id)
+
+		(self.jdir / f'{record_id}.jr').write_text(self.json.dumps(record))
 
 
 	# manually remove a journal entry
 	def unreg_file(self, flpath):
-		tgt_unreg = str(self.Path(flpath).resolve()).rstrip('/')
-		unreg_id = self.srv.util.eval_hash(str(flpath), 'sha256')
-		(self.jdir / f'{unreg_index}.jr').unlink(missing_ok=True)
+		unreg_id = self.wfutil.eval_hash(str(self.Path(flpath).as_posix()), 'sha256')
+		print(flpath, unreg_id)
+		(self.jdir / f'{unreg_id}.jr').unlink(missing_ok=True)
 
 
 
@@ -58,16 +67,10 @@ class wafer_redundancy_journal:
 # .output               = sys.stdout.buffer.write = write bytes to the client directly (edge cases)
 # .platform             = which platform this server is running on (windows/linux) (as if there could be more than two options)
 # .headers              = headers which came with the incoming http request as dict
+# .bin_as_json          = evaluate input data to json
 # .ftp_root             = pathlib Path which points to the FTP root
 # .sysdb_path           = util db, like temp files, media previews and media queue
 # .authdb_path:         = pathlib Path to the root of the auth db
-#     -authsys
-#        -users
-#            -userdb.db
-#        -details
-#            ...
-#        -cfg
-#            -default_user
 # .tmp_dir              = temp dir which is allowed to be big
 # .server_root          = server root (where index.html is at)
 # .util                 = util functions from the wafer_util.py file
@@ -78,7 +81,7 @@ class wafer_redundancy_journal:
 # .sv_cfg               = raw server config
 
 
-# .journal                     = file journal system
+# .rd_journal                  = file journal system
 # .bin_as_json                 = tries evaluating input data as json
 # .error(error_details)        = spit a fatal error (through header)
 # .flush(add_bytes)            = flush existing buffer and exit, optionally adding more bytes
@@ -177,7 +180,7 @@ class server:
 		self.util = wafer_util
 
 		# journal is not always needed
-		self._journal = None
+		self._rdjournal = None
 
 		# also make cgitb write errors to files
 		cgitb.enable(format='text', logdir=str(self.sysdb_path / 'cgi_err'))
@@ -271,10 +274,15 @@ class server:
 
 	# journal which keeps track of files to delete
 	@property
-	def journal(self):
-		if not self._journal:
-			self._journal = wafer_redundancy_journal(self)
-		return 
+	def rd_journal(self):
+		if not self._rdjournal:
+			self._rdjournal = wafer_redundancy_journal(
+				self.sysdb_path / 'redundancy_list',
+				self.util,
+				self.Path,
+				self.json
+			)
+		return self._rdjournal
 
 
 	def bin_as_json(self):
@@ -315,6 +323,7 @@ class server:
 			# except:
 			# 	h = str(h).encode()
 
+			# todo: what if either key/value has \r\n in it ?
 			self.output(f'{h}: {self.response_headers[h]}\r\n'.encode())
 		# content type
 		self.output('Content-Type: application/octet-stream\r\n\r\n'.encode())
@@ -382,7 +391,8 @@ class server:
 # all requests are evaluated through this gateway for better error handling
 # and action redirection
 # as of now this is basicaly the gateway and should be called "gateway"
-class md_actions:
+# (done, not it's just a gateway)
+class sgateway:
 	"""Actions"""
 	def __init__(self, srv, registry={}):
 		self.reg = registry
@@ -402,7 +412,7 @@ class md_actions:
 			# The way this works is pretty interesting:
 
 			# When exception occurs upon module action evaluation - 
-			# the server outputs a header to the output buffer which indicates that the fatal error occured
+			# the server outputs a header to the output buffer which indicates that a fatal error occured
 			# and then raises the error
 
 			# When an error is raised, the cgitb module adds a PROPERLY FORMATTED error traceback to the output buffer
@@ -411,6 +421,8 @@ class md_actions:
 
 			# The most important part is that all of the above happens
 			# while keeping the client aware of the said fatal error
+
+			# todo: cgitb simply binds a handler to exceptions. Do it manually without cgitb ?
 
 			self.srv.output('wafer-fatal-error: raw_exception\r\n'.encode())
 			# todo: citb adds appropriate content type automatically
