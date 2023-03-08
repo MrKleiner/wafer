@@ -119,7 +119,7 @@ def run_setup(server_config):
 	# ===================================================
 	#            CREATE A DEFAULT OWNER ACCOUNT
 	# ===================================================
-	owner_token = util.generate_token(False, 3)
+	owner_token = util.generate_token()
 
 	cursor_obj.execute(f"""
 		INSERT INTO authdb
@@ -147,7 +147,7 @@ def run_setup(server_config):
 	owner_token_file = {
 		'userid': owner_token,
 		'created': datetime.datetime.now().isoformat(),
-		'crypto': util.generate_token(False, 5),
+		'crypto': util.generate_token(),
 		'lifetime': 2_592_000_000
 	}
 	(authdb_root / 'details' / owner_token / 'token.lzrd').write_bytes(json.dumps(owner_token_file).encode())
@@ -175,7 +175,7 @@ def run_setup(server_config):
 	# ===================================================
 	#            CREATE A DEFAULT EMPTY USER
 	# ===================================================
-	guest_token = util.generate_token(False, 3)
+	guest_token = util.generate_token()
 
 	cursor_obj.execute(f"""
 		INSERT INTO authdb
@@ -203,7 +203,7 @@ def run_setup(server_config):
 	guest_token_file = {
 		'userid': guest_token,
 		'created': datetime.datetime.now().isoformat(),
-		'crypto': util.generate_token(False, 1),
+		'crypto': util.generate_token(),
 		'lifetime': 2_592_000_000
 	}
 	(authdb_root / 'details' / guest_token / 'token.lzrd').write_bytes(json.dumps(guest_token_file).encode())

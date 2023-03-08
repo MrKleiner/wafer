@@ -1,6 +1,10 @@
 
 
 
+# ===============================================
+#                Media queue
+# ===============================================
+
 def mqueue_loop(self):
 	from pathlib import Path
 	import time
@@ -61,6 +65,7 @@ class wd_mqueue_ctrl:
 #                Redundancy Watcher
 # ===============================================
 
+
 def redundancy_watcher_loop(self):
 	from pathlib import Path
 	import time
@@ -96,7 +101,7 @@ class wd_redundancy_watcher:
 		# self.is_scanning = False
 
 		# launch the queue shit
-		self.red_button = threading.Thread(target=redundancy_watcher_loop, args=(self,), daemon=True).start()
+		threading.Thread(target=redundancy_watcher_loop, args=(self,), daemon=True).start()
 
 
 	# entry: pathlib.Path()
@@ -151,6 +156,13 @@ class wd_redundancy_watcher:
 
 		# write down the amount of time it took to process the current list
 		self.processing_time = time.time() - op_start_time
+
+
+
+
+
+
+
 
 
 

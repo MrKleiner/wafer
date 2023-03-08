@@ -103,7 +103,7 @@ def giga_json(inp, bt=False):
 # pass True to generate a super long token (sha512)
 # pass string 'short' to generate short
 # bias is a multiplier for the random seed length. Defaults are good enough
-def generate_token(do_long=False, bias=1):
+def generate_token_v0(do_long=False, bias=1):
 	from random import random
 	if do_long == 'short':
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(256*bias))]), 'sha1')
@@ -113,6 +113,37 @@ def generate_token(do_long=False, bias=1):
 		return eval_hash('!lizard?'.join([str(random()) for rnd in range(int(64*bias))]), 'sha256')
 
 
+# tlen is an int from 1 to 3
+# 1: 32  chars / 128 bits / 16 bytes
+# 2: 64  chars / 256 bits / 32 bytes (default)
+# 3: 128 chars / 512 bits / 64 bytes
+
+# bias is a paranoia level multiplier.
+# int from 1 (default, good enough) to infinity (performance warning)
+
+# tcrypto is whether to use crypto (slower, default) or pseudo (faster)
+def generate_token(tlen=2, bias=1, tcrypto=True):
+	if tcrypto == True:
+		import secrets, hashlib
+		if bias > 1:
+			rndseed = secrets.token_bytes(int(64*bias))
+			if tlen == 1:
+				return hashlib.md5(rndseed).hexdigest()
+			if tlen == 2:
+				return hashlib.sha256(rndseed).hexdigest()
+			if tlen == 3:
+				return hashlib.sha512(rndseed).hexdigest()
+		else:
+			if tlen == 1:
+				return secrets.token_hex(16)
+			if tlen == 2:
+				return secrets.token_hex(32)
+			if tlen == 3:
+				return secrets.token_hex(64)
+
+
+		# default fallback
+		return secrets.token_hex(32)
 
 
 def sp_popen(exec_args):

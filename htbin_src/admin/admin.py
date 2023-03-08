@@ -1,9 +1,10 @@
 import sys
 sys.path.append('..')
-from server import server, md_actions
+from server import server, jateway
 server = server()
+
 # reject non-admin users immediately
-server.wfauth.request_admin()
+server.wfauth.require_admin()
 
 # codes:
 # 1809246
@@ -19,7 +20,7 @@ class user_ctrl:
 
 	# init usually means auth
 	def __init__(self):
-		self.pootis = 'a'
+		self.usr_dbfile = server.authdb_path / 'authsys' / 'users' / 'userdb.db'
 
 
 	# load users database
@@ -31,9 +32,9 @@ class user_ctrl:
 		users = []
 
 		# get user IDs, logins and passwords
-		connection = sqlite3.connect(str(server.authdb_path / 'authsys' / 'users' / 'userdb.db'))
+		connection = sqlite3.connect(str(self.usr_dbfile))
 		cursor_obj = connection.cursor()
-		cursor_obj.execute(f"""
+		cursor_obj.execute("""
 			SELECT
 				user_id, login, pswd
 			FROM

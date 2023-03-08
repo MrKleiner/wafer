@@ -1,7 +1,47 @@
 from pathlib import Path
 import json, os, shutil
+os.system('cls')
+print('Compiling.')
 
 
+# write tree/file to win/linux/both
+def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='*'):
+	if not destwin:
+		destwin = destlin
+
+	dirsrc = Path(dirsrc)
+	destlin = Path(destlin)
+	destwin = Path(destwin)
+
+	if dirsrc.is_dir():
+		if tolinux:
+			tree_copy(dirsrc, destlin, pattern)
+		if towin:
+			tree_copy(dirsrc, destwin, pattern)
+
+		return
+
+	if dirsrc.is_file():
+		if tolinux:
+			shutil.copy(dirsrc, destlin)
+		if towin:
+			shutil.copy(dirsrc, destwin)
+
+
+def write_file(content, destlin, destwin=None, tolinux=True, towin=True):
+	if not destwin:
+		destwin = destlin
+	destlin = Path(destlin)
+	destwin = Path(destwin)
+
+	if tolinux:
+		destlin.write_text(content)
+	if towin:
+		destwin.write_text(content)
+
+
+
+# Copy a tree of files to a new location
 def tree_copy(src, dest, pattern='*'):
 	src = Path(src)
 	dest = Path(dest) / src.name
@@ -13,24 +53,33 @@ def tree_copy(src, dest, pattern='*'):
 			(dest / rel.parent).mkdir(parents=True, exist_ok=True)
 			shutil.copy(tgt, dest / rel)
 
+# Delete a dir tree and then recreate root
 def wipe_folder(fld):
 	fld = Path(fld)
 	if fld.is_dir():
 		shutil.rmtree(fld)
 	fld.mkdir()
 
+
+
+# the "dev" dir
 thisdir = Path(__file__).parent
+# Root where all the source files lay
 project = thisdir.parent
 
+# Compilation config
 conf = json.loads((thisdir / 'release_info.json').read_bytes())
 
+# Put Linux release in this dir
 release_dir = Path(conf['dest']) / f"""wafer_{conf['ver']}_linux"""
+# Put Windows release in this dir
 release_dir_win = Path(conf['dest']) / f"""wafer_{conf['ver']}_win"""
 
+# Make sure that the release destination dirs are empty
 wipe_folder(release_dir)
 wipe_folder(release_dir_win)
 
-# create sys folder
+# create JS client dir
 release_dir_web = release_dir / 'web'
 release_dir_web_win = release_dir_win / 'web'
 release_dir_web.mkdir()
@@ -38,49 +87,52 @@ release_dir_web_win.mkdir()
 
 
 # copy js apis
-tree_copy(project / 'apis', release_dir_web)
-tree_copy(project / 'apis', release_dir_web_win)
+duplicate(project / 'apis', release_dir_web, release_dir_web_win)
 
 # copy assets (images n shit)
-tree_copy(project / 'assets', release_dir_web)
-tree_copy(project / 'assets', release_dir_web_win)
+duplicate(project / 'assets', release_dir_web, release_dir_web_win)
 
 # copy html panels
-tree_copy(project / 'html_panels', release_dir_web)
-tree_copy(project / 'html_panels', release_dir_web_win)
+duplicate(project / 'html_panels', release_dir_web, release_dir_web_win)
 
 # copy compiled js modules
-tree_copy(project / 'js_client', release_dir_web)
-tree_copy(project / 'js_client', release_dir_web_win)
+duplicate(project / 'js_client', release_dir_web, release_dir_web_win)
 
 # copy htbin (python scripts)
-tree_copy(project / 'htbin_src', release_dir_web)
-tree_copy(project / 'htbin_src', release_dir_web_win)
+duplicate(project / 'htbin_src', release_dir_web, release_dir_web_win)
 
 # copy setup dir
-tree_copy(project / 'setup', release_dir_web)
-tree_copy(project / 'setup', release_dir_web_win)
+duplicate(project / 'setup', release_dir_web, release_dir_web_win)
 
 # copy wafer sys
-tree_copy(project / 'wsys', release_dir)
-tree_copy(project / 'wsys', release_dir_win)
+duplicate(project / 'wsys', release_dir, release_dir_win)
 
 # copy wafer_util from wsys to htbin_src
-shutil.copy(project / 'wsys' / 'p_mods' / 'wafer_util.py', release_dir_web / 'htbin_src')
-shutil.copy(project / 'wsys' / 'p_mods' / 'wafer_util.py', release_dir_web_win / 'htbin_src')
+duplicate(
+	project / 'wsys' / 'p_mods' / 'wafer_util.py',
+	release_dir_web     / 'htbin_src',
+	release_dir_web_win / 'htbin_src'
+)
 
 # copy lstruct shit
 lstruct = Path(conf['lstruct']).read_text().split('# @\n# Rubbish split\n# @')[0].strip()
-(release_dir / 'wsys' / 'p_mods' / 'lightstruct.py').write_text(lstruct)
-(release_dir_win / 'wsys' / 'p_mods' / 'lightstruct.py').write_text(lstruct)
+write_file(
+	lstruct,
+	release_dir     / 'wsys' / 'p_mods' / 'lightstruct.py',
+	release_dir_win / 'wsys' / 'p_mods' / 'lightstruct.py',
+)
+
 
 
 # copy setup html to the root with the name "index.html"
-shutil.copy(project / 'setup' / 'setup.html', release_dir_web / 'index.html')
-shutil.copy(project / 'setup' / 'setup.html', release_dir_web_win / 'index.html')
+duplicate(
+	project / 'setup' / 'setup.html',
+	release_dir_web     / 'index.html',
+	release_dir_web_win / 'index.html'
+)
 
-# windows specific
-tree_copy(project / 'bins', release_dir_win)
+# windows specific binaries like imagemagick n shit
+duplicate(project / 'bins', release_dir_win, tolinux=False)
 
 # __pycache__ cleanup
 caches = [pc for pc in release_dir.rglob('*') if pc.is_dir() and pc.name == '__pycache__']
@@ -89,7 +141,7 @@ for pycl in caches:
 	if pycl.is_dir():
 		shutil.rmtree(pycl)
 
-# copy other files
+# copy some files to the JS client release dir
 additional = (
 	'css_index.css',
 	# 'index.html',
@@ -97,6 +149,21 @@ additional = (
 	'wafer.evbinds.js',
 )
 for adt in additional:
-	shutil.copy(project / adt, release_dir_web)
-	shutil.copy(project / adt, release_dir_web_win)
+	duplicate(project / adt, release_dir_web, release_dir_web_win)
 
+
+
+# construct server gateway
+server_entry = (
+	Path(conf['jag']).read_text().strip(),
+	(project / 'wsys' / 'p_mods' / 'rd_journal_ctrl.py').read_text().strip(),
+	(project / 'htbin_src' / 'server.py').read_text().strip(),
+)
+write_file(
+	'\n\n'.join(server_entry),
+	release_dir_web     / 'htbin_src' / 'server.py',
+	release_dir_web_win / 'htbin_src' / 'server.py'
+)
+
+
+print('Done.')

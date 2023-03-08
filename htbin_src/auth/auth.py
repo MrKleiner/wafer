@@ -55,7 +55,9 @@ class wfauth:
 		# datetime.datetime.now().isoformat()
 		# datetime.datetime.fromisoformat(sex)
 		self.token['created'] = datetime.datetime.now().isoformat()
-		self.token['crypto'] = self.srv.util.generate_token(True, 5)
+		# todo: use level 3 like before? (512 bits)
+		self.token['crypto'] = self.srv.util.generate_token()
+		# todo: dont forget to change this
 		self.token['lifetime'] = 2_592_000_000
 
 		(self.usr / 'token.lzrd').write_bytes(srv.json.dumps(self.token))
@@ -157,7 +159,7 @@ class wfauth:
 			self.srv.fatal_error('malformed_jwt')
 			self.srv.flush_json({
 				'error': 'malformed JWT token',
-				'details': str(jwtsplit)
+				'details': str(jwtsplit),
 			})
 			return
 
@@ -173,7 +175,7 @@ class wfauth:
 			self.srv.fatal_error('invalid_userid')
 			self.srv.flush_json({
 				'error': 'invalid_userid',
-				'details': 'User with the specified ID does not exist'
+				'details': 'User with the specified ID does not exist',
 			})
 			return
 

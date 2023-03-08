@@ -1,4 +1,7 @@
 
+
+
+
 class wfcfg_ctrl:
 	"""Easier access to configs and sys structure"""
 	def __init__(self, cfgdir, sysroot):
@@ -12,9 +15,18 @@ class wfcfg_ctrl:
 		self.webcl_dir = sysroot / 'web'
 		self.syslog_dir = sysroot / 'wsys' / 'syslog'
 
+		# base is used everywhere. Precache it...
+		self.sysc_cache = json.loads((self.cfgdir / 'sysc_base.lzrd').read_bytes())
+
 
 	def __getitem__(self, cfgname):
-		return json.loads((self.cfgdir / f'{cfgname}.lzrd').read_bytes())
+		return self.json.loads((self.cfgdir / f'{cfgname}.lzrd').read_bytes())
+
+
+	def upd_sysc_cache(self):
+		# todo: implement caching by simply assigning the parameter outside the class
+		self.sysc_cache = json.loads((self.cfgdir / 'sysc_base.lzrd').read_bytes())
+
 
 
 
@@ -34,9 +46,31 @@ class wf_sys_util:
 		except Exception as e:
 			return False
 
+
+
+
+class wafer_env:
+	"""environment variables, like paths and configs"""
+	def __init__(self, cfgdir, sysroot):
+		import json
+		from pathlib import Path
+		self.json = json
+		self.Path = Path
+
+		self.cfgdir = Path(cfgdir)
+
+		basecfg = json.loads((self.cfgdir / 'sysc_base.lzrd').read_bytes())
+
+		self.ftproot = Path(basecfg['ftproot'])
+		self.sysroot = sysroot
+		self.wsys_dir = sysroot / 'wsys'
+		self.webcl_dir = sysroot / 'web'
+		self.syslog_dir = sysroot / 'wsys' / 'syslog'
+
+
+
+
 		
-
-
 
 
 

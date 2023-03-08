@@ -1,6 +1,6 @@
 import sys
 sys.path.append('..')
-from server import server, md_actions
+from server import server, jateway
 server = server()
 
 

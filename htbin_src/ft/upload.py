@@ -1,6 +1,6 @@
 import sys
 sys.path.append('..')
-from server import server, md_actions
+from server import server, jateway
 server = server()
 
 
@@ -176,7 +176,7 @@ class uploadsys:
 			})
 
 		# now, generate a random id, aka Upload Token
-		up_token = server.util.generate_token(bias=3)
+		up_token = server.util.generate_token()
 
 		# create the info object
 		info_object = {

@@ -18,6 +18,8 @@ const obj_url = (window.URL || window.webkitURL);
 
 const htbin = 'htbin'
 
+// important todo: https://stackoverflow.com/questions/16090530/how-to-point-a-websocket-to-the-current-server
+
 //
 // applicable formats
 //
