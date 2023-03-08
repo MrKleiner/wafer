@@ -38,9 +38,6 @@ class server(jag_server):
 	def __init__(self):
 		super().__init__()
 
-		# wafer-fatal-error
-		# wafer-error
-
 		import wafer_util
 		from server_config import server_config as svconf
 		from auth.auth import wfauth

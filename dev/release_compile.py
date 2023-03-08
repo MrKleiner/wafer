@@ -4,7 +4,7 @@ os.system('cls')
 print('Compiling.')
 
 
-# write tree/file to win/linux/both
+# copy tree/file to win/linux/both
 def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='*'):
 	if not destwin:
 		destwin = destlin
@@ -27,7 +27,7 @@ def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='
 		if towin:
 			shutil.copy(dirsrc, destwin)
 
-
+# Write data to a file to win/linux
 def write_file(content, destlin, destwin=None, tolinux=True, towin=True):
 	if not destwin:
 		destwin = destlin
@@ -39,6 +39,11 @@ def write_file(content, destlin, destwin=None, tolinux=True, towin=True):
 	if towin:
 		destwin.write_text(content)
 
+
+def dict_replace(src, matches):
+	for drp in matches:
+		src = src.replace(drp, matches[drp])
+	return src
 
 
 # Copy a tree of files to a new location
@@ -154,8 +159,14 @@ for adt in additional:
 
 
 # construct server gateway
+jag_burns = {
+	'$JAG_FATAL_ERR_MSG$':                'wafer-fatal-error',
+	'$JAG_REGULAR_ERR_MSG$':              'wafer-error',
+	'$JAG_JATEWAY_ACTION_NOT_FOUND_MSG$': 'raw_exception',
+	'$JAG_X_FILES_HNAME$':                'X-Sendfile',
+}
 server_entry = (
-	Path(conf['jag']).read_text().strip(),
+	dict_replace(Path(conf['jag']).read_text().strip(), jag_burns),
 	(project / 'wsys' / 'p_mods' / 'rd_journal_ctrl.py').read_text().strip(),
 	(project / 'htbin_src' / 'server.py').read_text().strip(),
 )
