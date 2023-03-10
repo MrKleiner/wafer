@@ -68,7 +68,7 @@
 	// it's possible to sync the processed stuff with a remote destination
 	// bootlegger server has to be running on the other side
 	// coming soon: raw TCP sync for better performance
-	"sync": {},
+	"sync": {}
 }
 
 
