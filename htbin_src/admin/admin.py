@@ -43,6 +43,7 @@ class user_ctrl:
 		user_creds = cursor_obj.fetchall()
 		connection.close()
 
+
 		# for every user write down his login creds and read user info from disk
 		for usr in user_creds:
 			users.append({
@@ -50,11 +51,13 @@ class user_ctrl:
 				'login': usr[1],
 				'pswd': usr[2],
 				'rules': server.jload(server.authdb_path / 'authsys' / 'details' / usr[0] / 'rules.lzrd')
-			})
+			} | server.jload(server.authdb_path / 'authsys' / 'details' / usr[0] / 'info.lzrd')
+			)
 
 		server.bin_jwrite(users)
 		server.flush()
 
+	
 
 	def update_users(self):
 		pass

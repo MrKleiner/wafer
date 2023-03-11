@@ -182,7 +182,7 @@ class wfauth:
 		# now validate the JWT token
 		jwt_from_db = self.construct_token(self.srv.jload(details_path / 'token.lzrd'))
 
-		if jwt_from_db != provided_jwt:
+		if jwt_from_db != ''.join(provided_jwt):
 			self.srv.set_header('wafer-error', 'invalid_jwt')
 			self.srv.flush(self.srv.json.dumps({
 				'error': 'invalid_jwt',
@@ -195,7 +195,7 @@ class wfauth:
 		self.userid = userid
 		self.usr_path = details_path
 		self.usr_info = self.srv.jload(details_path / 'info.lzrd')
-		self.isadmin = self.usr_info['isadmin']
+		self.isadmin = (self.usr_info['isadmin'] == True)
 
 		self.srv.set_header('wafer-admin', self.isadmin)
 

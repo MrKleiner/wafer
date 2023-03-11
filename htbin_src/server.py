@@ -6,6 +6,7 @@
 # .Path                 = pathlib Path
 # .json                 = json module
 # .sys                  = sys module
+# .os                   = os module
 # .output               = sys.stdout.buffer.write = write bytes to the client directly (edge cases)
 # .platform             = which platform this server is running on (windows/linux) (as if there could be more than two options)
 # .headers              = headers which came with the incoming http request as dict
@@ -42,20 +43,21 @@ class server(jag_server):
 		from server_config import server_config as svconf
 		from auth.auth import wfauth
 
+		self.wafer_version = '$WAFER_VERSION_NUMBER$'
+
 		# raw server config
 		# self.sv_cfg = util.giga_json(self.server_root / 'htbin' / 'server_config.json')
 		self.sv_cfg = svconf
 
 		# server root folder
 		# todo: can this be faster ?
+		# important todo: yes, just grab the second parent
 		for pr in Path(__file__).parents:
 			if (pr / 'wafer_root.wfrt').is_file():
 				self.server_root = pr
 				break
 
 		# system root, aka root of the file pool
-		# important todo: better name it ftp_root
-		# self.sys_root = Path(self.sv_cfg['system_root'])
 		self.ftp_root = Path(self.sv_cfg['system_root'])
 		
 		# util db, like temp files and media previews

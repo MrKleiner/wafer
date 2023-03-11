@@ -13,6 +13,18 @@ class login:
 	def __init__(self):
 		self.sex = 1
 
+	# return fresh user info
+	def whoami(self):
+		server.flush_json({
+			'guest':         server.wfauth.guest,
+			'isadmin':       server.wfauth.isadmin,
+			'torrenting':    server.wfauth.usr_info.torrenting,
+			'edit_thumbs':   server.wfauth.usr_info.edit_thumbs,
+			'server_render': server.wfauth.usr_info.server_render,
+			'edit_self':     server.wfauth.usr_info.edit_self,
+		})
+		
+
 
 	def do_login(self):
 
@@ -58,7 +70,8 @@ login_class = login()
 actions = md_actions(
 	server,
 	{
-		'login': login_class.do_login
+		'login':  login_class.do_login,
+		'whoami': login_class.whoami,
 	}
 )
 actions.eval_action()

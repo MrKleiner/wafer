@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+	<head>
+		<meta charset="UTF-8">
+		<title>Wafer 2.0</title>
+		<link rel="shortcut icon" href="/assets/hat.png" type="image/x-icon">
+
+		<!-- CSS INDEX -->
+		<link rel="stylesheet" type="text/css" href="/css_index.css">
+	</head>
+	
+	<body>
+		<div id="gui_error_pool"></div>
+		<div style="display: none">
+			<!-- сафари хуйня -->
+		</div>
+		<div id="app_topbar">
+			<div id="topbar_left">
+				<div id="topbar_name"></div>
+				<btn id="nav_go_home">Home</btn>
+				<btn id="nav_display_help">Help</btn>
+			</div>
+
+			<div id="topbar_nav">
+				<btn id="nav_enter_edit">Admin</btn>
+				<btn id="nav_login">Login (Grant edit priveleges)</btn>
+				<btn id="nav_sign_out">Sign Out</btn>
+			</div>
+		</div>
+		<div id="pages_pool"></div>
+	</body>
+
+	<!-- LIBS -->
+	<script src='/apis/jquery/3_6_0/jquery.min.js'></script>
+	<script src='/apis/crypto_js/4_1_1/crypto-js.min.js'></script>
+	<script src='/apis/toolbox/toolbox.js'></script>
+	<!-- important todo: USE OLDER JSZIP BECAUSE NEWER ONES ARE SHIT -->
+	<script src='/apis/jszip/3_2_0/jszip.min.js'></script>
+	<script src='/apis/filesaverjs/2_0_4/filesaver.min.js'></script>
+	<script src='/apis/gigabin_js/gigabin.js'></script>
+	<script src='/apis/wavesurfer/6_3_0/wavesurfer.js'></script>
+	<script src='/apis/fuck_js/fix-webm-duration.js'></script>
+
+
+	<!-- MODULES -->
+	<script src='/js_client/core/core_base.js'></script>
+	<script type="module" src='/js_client/core/core_sec.js'></script>
+
+
+</html>

@@ -156,6 +156,19 @@ additional = (
 for adt in additional:
 	duplicate(project / adt, release_dir_web, release_dir_web_win)
 
+# Burn version into the files
+burn_ver = (
+	'htbin_src/server.py',
+	'js_client/core/core.js',
+)
+for bv in burn_ver:
+	for _platform in (release_dir_web, release_dir_web_win,):
+		_tgt = _platform / bv
+		_read = _tgt.read_text().replace('$WAFER_VERSION_NUMBER$', conf['ver'])
+		_tgt.write_text(_read)
+
+
+
 
 
 # construct server gateway
@@ -163,6 +176,7 @@ jag_burns = {
 	'$JAG_FATAL_ERR_MSG$':                'wafer-fatal-error',
 	'$JAG_REGULAR_ERR_MSG$':              'wafer-error',
 	'$JAG_JATEWAY_ACTION_NOT_FOUND_MSG$': 'raw_exception',
+	# important todo: this has to be configurable
 	'$JAG_X_FILES_HNAME$':                'X-Sendfile',
 }
 server_entry = (
