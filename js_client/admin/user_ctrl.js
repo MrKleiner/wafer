@@ -188,8 +188,10 @@ class usr_ctrl
 		}
 		
 		// Do not populate shared ruleset, because it's later evaluated on each expand
-		this.shared_rule_sel.add($(`<option value="${usr_info.rules.shared_rule}">${usr_info.rules.shared_rule}</option>`)[0]);
-		this.shared_rule_sel.value = usr_info.rules.shared_rule;
+		if (usr_info.rules.shared_rule){
+			this.shared_rule_sel.add($(`<option value="${usr_info.rules.shared_rule}">${usr_info.rules.shared_rule}</option>`)[0]);
+			this.shared_rule_sel.value = usr_info.rules.shared_rule;
+		}
 
 		// append rule to the pool
 		$('#panel_root').append(this.usr_elem)
@@ -244,7 +246,6 @@ class usr_ctrl
 
 
 
-
 // const oof1 = new usr_ctrl(_example1)
 // const oof2 = new usr_ctrl(_example2)
 
@@ -253,7 +254,13 @@ class usr_ctrl
 // console.log([oof1.dump(), oof2.dump()])
 
 
-window.bootlegger.admin.load = async function()
+// window.bootlegger.admin.load = async function()
+
+
+// load users
+function load_user_list(){
+	
+}
 
 
 

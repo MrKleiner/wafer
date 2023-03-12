@@ -18,10 +18,11 @@ class login:
 		server.flush_json({
 			'guest':         server.wfauth.guest,
 			'isadmin':       server.wfauth.isadmin,
-			'torrenting':    server.wfauth.usr_info.torrenting,
-			'edit_thumbs':   server.wfauth.usr_info.edit_thumbs,
-			'server_render': server.wfauth.usr_info.server_render,
-			'edit_self':     server.wfauth.usr_info.edit_self,
+			'torrenting':    server.wfauth.usr_info['torrenting'],
+			'edit_thumbs':   server.wfauth.usr_info['edit_thumbs'],
+			'server_render': server.wfauth.usr_info['server_render'],
+			'edit_self':     server.wfauth.usr_info['edit_self'],
+			'login':         server.wfauth.usr_info['login'],
 		})
 		
 

@@ -33,6 +33,32 @@
 
 		<main class="flex_col">
 
+			<div class="flex_col param_row" id="xfiles">
+				<div class="descr">
+					Wafer heavily relies on the server software to handle large file transactions.
+					<br>
+					It signals which file to send by utilizing a special header.
+					<br>
+					In lighttpd it's called X-Sendfiles and is built-in.
+					<br>
+					In Apache and other systems it's almost the same, but is usually not built-in.
+					<br>
+					(you can't run Wafer with simple stuff like python simple http server)
+					<br>
+					You have to specify the name of this header for the system to work properly.
+					<br>
+					You can autofill the name by clicking on presets or specify the name yourself.
+					Keep in mind that it's case-sensitive and has to perfectly match the system you're using.
+				</div>
+					<select onchange="this.parentElement.querySelector('input').value = this.value;">
+						<option value="X-Sendfile">Lighttpd</option>
+						<option value="X-SendFile">Apache</option>
+					</select>
+				<input placeholder="STR" value="X-Sendfile" type="text">
+				<div class="err"></div>
+				<div class="warn"></div>
+			</div>
+
 			<div class="flex_col param_row" id="ftp_root">
 				<div class="descr">
 					Root of the target file system.

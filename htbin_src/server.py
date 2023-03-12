@@ -40,8 +40,10 @@ class server(jag_server):
 		super().__init__()
 
 		import wafer_util
-		from server_config import server_config as svconf
+		from server_config import data as svconf
 		from auth.auth import wfauth
+
+		self._xfiles_hname = svconf['xfiles']
 
 		self.wafer_version = '$WAFER_VERSION_NUMBER$'
 

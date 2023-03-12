@@ -7,8 +7,8 @@ def compile_json(jsrc, jdest, as_path=False):
 	if as_path == True:
 		jsrc = json.loads(Path(jsrc).read_bytes())
 	else:
-		if type(jsrc) == str:
-			jsrc = json.loads(jsrc)
+		# if type(jsrc) == str:
+		jsrc = json.loads(jsrc)
 	jbuffer = 'null = None' + '\n'
 	jbuffer += 'false = False' + '\n'
 	jbuffer += 'true = True' + '\n'
