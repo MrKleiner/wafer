@@ -5,7 +5,7 @@ print('Compiling.')
 
 
 # copy tree/file to win/linux/both
-def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='*'):
+def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='*', _ignore=[]):
 	if not destwin:
 		destwin = destlin
 
@@ -15,9 +15,9 @@ def duplicate(dirsrc, destlin, destwin=None, tolinux=True, towin=True, pattern='
 
 	if dirsrc.is_dir():
 		if tolinux:
-			tree_copy(dirsrc, destlin, pattern)
+			tree_copy(dirsrc, destlin, pattern, ignore=_ignore)
 		if towin:
-			tree_copy(dirsrc, destwin, pattern)
+			tree_copy(dirsrc, destwin, pattern, ignore=_ignore)
 
 		return
 
@@ -47,10 +47,12 @@ def dict_replace(src, matches):
 
 
 # Copy a tree of files to a new location
-def tree_copy(src, dest, pattern='*'):
+def tree_copy(src, dest, pattern='*', ignore=[]):
 	src = Path(src)
 	dest = Path(dest) / src.name
 	for tgt in src.rglob(pattern):
+		if tgt.name in ignore:
+			continue
 		rel = tgt.relative_to(src)
 		if tgt.is_dir():
 			(dest / rel).mkdir(parents=True, exist_ok=True)
@@ -91,26 +93,20 @@ release_dir_web.mkdir()
 release_dir_web_win.mkdir()
 
 
-# copy js apis
-duplicate(project / 'apis', release_dir_web, release_dir_web_win)
-
-# copy assets (images n shit)
-duplicate(project / 'assets', release_dir_web, release_dir_web_win)
-
-# copy html panels
-duplicate(project / 'html_panels', release_dir_web, release_dir_web_win)
-
-# copy compiled js modules
-duplicate(project / 'js_client', release_dir_web, release_dir_web_win)
+_common_dirs = (
+	'apis',
+	'assets',
+	'html_panels',
+	'js_client',
+	'wsys',
+	'setup',
+)
+for dtree in _common_dirs:
+	duplicate(project / _common_dirs, release_dir_web, release_dir_web_win)
 
 # copy htbin (python scripts)
-duplicate(project / 'htbin_src', release_dir_web, release_dir_web_win)
+duplicate(project / 'htbin_src', release_dir_web, release_dir_web_win, _ignore=('jag.py',))
 
-# copy setup dir
-duplicate(project / 'setup', release_dir_web, release_dir_web_win)
-
-# copy wafer sys
-duplicate(project / 'wsys', release_dir, release_dir_win)
 
 # copy wafer_util from wsys to htbin_src
 duplicate(
@@ -159,7 +155,7 @@ for adt in additional:
 # Burn version into the files
 burn_ver = (
 	'htbin_src/server.py',
-	'js_client/core/core.js',
+	'js_client/core/core_base.js',
 )
 for bv in burn_ver:
 	for _platform in (release_dir_web, release_dir_web_win,):

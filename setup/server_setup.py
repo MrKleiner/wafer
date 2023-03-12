@@ -51,6 +51,7 @@ class srv_setup:
 
 		# Compile rapid access config
 		# todo: is there a better way in python to do this ?
+		# important todo: split the into into lines for faster evaluation
 		compile_json(
 			{
 				'authdb':              str(self.cfg['authdb']),
@@ -96,8 +97,6 @@ class srv_setup:
 
 		for cm in (server / 'apis').rglob('*'):
 			os.chmod(str(cm), 0o444)
-
-
 
 
 
@@ -354,15 +353,8 @@ if __name__ == '__main__':
 		'upload_service_port': int(  incoming_info.get('upload_service_port') ),
 	}
 
-	# Write down config file to the htbin.
-	# This will be the config read by the server on EACH incoming request
-	# reading and evaluating json files is 3 times slower than importing compiled python code
-	# compile the incoming json into a .pyc file
-	# important todo: simplify rapid access config by splitting the parameters into separate lines
-	compile_json(sv_conf, server / 'htbin' / 'server_config.pyc')
-
 	# Run the setup
-	run_setup(sv_conf)
+	run_s = srv_setup(incoming_info)
 
 	# Delete index.html in the web dir
 	# Move main.html from html_panels to server root with the name index.html

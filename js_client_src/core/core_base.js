@@ -184,17 +184,18 @@ const file_to_bytes = async function(file, doblob=false)
 //
 
 
-window.action_registry = {};
+const action_registry = {};
 
 (function() {
 
 	const _act_gateway = function(event, evt_type){
 		const target_elem = event.target.closest('[wfact]');
 		if (target_elem){
-			const action = window.action_registry[target_elem.getAttribute('wfact')];
+			const action = action_registry[target_elem.getAttribute('wfact')];
 			if (!action){return}
 			if (action.type == evt_type){
-				window.action_registry[action].exec(event, target_elem)
+				// console.log(action_registry, action)
+				action.exec(event, target_elem)
 			}
 		}
 	}
@@ -217,7 +218,7 @@ window.action_registry = {};
 })();
 
 const register_action = function(name, atype, func){
-	window.action_registry[name] = {
+	action_registry[name] = {
 		'type': (`${atype}`).lower(),
 		'exec': func,
 	}

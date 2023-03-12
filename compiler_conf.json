@@ -27,8 +27,8 @@
 	// if module does not exist - ignore
 	// only counts if points to a valid destination. Otherwise - ignore.
 	"modules_order": [
-		"core",
-		"home"
+		"core"
+		// "home"
 	],
 
 	// Path to the root folder containing modules folder, variables, fonts, etc
