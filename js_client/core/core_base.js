@@ -188,17 +188,33 @@ const file_to_bytes = async function(file, doblob=false)
 //
 
 
-window.action_registry = {};
+const action_registry = {};
 
 (function() {
+
+	const _act_gateway_v0 = function(event, evt_type){
+		const target_elem = event.target.closest('[wfact]');
+		if (target_elem){
+			const action = action_registry[target_elem.getAttribute('wfact')];
+			if (!action){return}
+			if (action.type == evt_type){
+				// console.log(action_registry, action)
+				action.exec(event, target_elem)
+			}
+		}
+	}
 
 	const _act_gateway = function(event, evt_type){
 		const target_elem = event.target.closest('[wfact]');
 		if (target_elem){
-			const action = window.action_registry[target_elem.getAttribute('wfact')];
-			if (!action){return}
-			if (action.type == evt_type){
-				window.action_registry[action].exec(event, target_elem)
+			const acts = target_elem.getAttribute('wfact').split(',');
+			for (let act of acts){
+				const action = action_registry[act];
+				if (!action){continue}
+				if (action.type == evt_type){
+					// console.log(action_registry, action)
+					action.exec(event, target_elem)
+				}
 			}
 		}
 	}
@@ -208,7 +224,7 @@ window.action_registry = {};
 		'input',
 		'contextmenu',
 		'keydown',
-		'mousemove',
+		// 'mousemove',
 		'wheel',
 	];
 
@@ -221,7 +237,7 @@ window.action_registry = {};
 })();
 
 const register_action = function(name, atype, func){
-	window.action_registry[name] = {
+	action_registry[name] = {
 		'type': (`${atype}`).lower(),
 		'exec': func,
 	}
@@ -273,7 +289,9 @@ const sysloader = async function(panelname=null, as_return=false)
 const _pycmd_defaults = {
 	'module': '',
 	'rqt': 'post',
-	'prms': {},
+	'prms': {
+		'action': '@@',
+	},
 	'payload': '',
 	'load_as': 'text'
 }

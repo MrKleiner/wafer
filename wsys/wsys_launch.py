@@ -8,6 +8,9 @@
 # OTHERWISE it's automatically assumed that client IS WSS
 
 
+# important todo: IF requests to self would ever be a thing
+# then auth should simply be done through a token generated on startup and passed to all the systems.
+# OR simply reject all non-localhost requests...
 
 
 

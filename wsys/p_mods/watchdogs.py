@@ -71,6 +71,7 @@ def redundancy_watcher_loop(self):
 	import time
 
 	while True:
+		# important todo: should this be configurable ?
 		time.sleep(60*90)
 		self.exec_scan()
 

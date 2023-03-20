@@ -57,8 +57,8 @@ class srv_setup:
 				'authdb':              str(self.cfg['authdb']),
 				'sysdb':               str(self.cfg['sysdb']),
 				'xfiles':              str(self.cfg['xfiles']),
-				'watchdogs_port':      str(self.cfg['watchdogs_port']),
-				'upload_service_port': str(self.cfg['upload_service_port']),
+				'watchdogs_port':      int(self.cfg['watchdogs_port']),
+				'upload_service_port': int(self.cfg['upload_service_port']),
 			},
 			server / 'htbin' / 'server_config.json'
 		)
@@ -72,8 +72,8 @@ class srv_setup:
 			'authdb':              self.cfg['authdb'],
 			'sysdb':               self.cfg['sysdb'],
 			'xfiles':              self.cfg['xfiles'],
-			'watchdogs_port':      self.cfg['watchdogs_port'],
-			'upload_service_port': self.cfg['upload_service_port'],
+			'watchdogs_port':      int(self.cfg['watchdogs_port']),
+			'upload_service_port': int(self.cfg['upload_service_port']),
 			'upload_size_limit':   (1024**2)*80_000,
 			'upload_timeout':      24,
 		}, indent='\t'))

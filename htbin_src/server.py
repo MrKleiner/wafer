@@ -15,7 +15,7 @@
 # .sysdb_path           = util db, like temp files, media previews and media queue
 # .authdb_path:         = pathlib Path to the root of the auth db
 # .tmp_dir              = temp dir which is allowed to be big
-# .server_root          = server root (where index.html is at)
+# .webroot              = server root (where index.html is at)
 # .util                 = util functions from the wafer_util.py file
 # .allowed_vid          = recognized video formats (ffmpeg)
 # .allowed_img          = recognized image formats for ffmpeg
@@ -54,23 +54,25 @@ class server(jag_server):
 		# server root folder
 		# todo: can this be faster ?
 		# important todo: yes, just grab the second parent
-		for pr in Path(__file__).parents:
-			if (pr / 'wafer_root.wfrt').is_file():
-				self.server_root = pr
-				break
+		# for pr in self.Path(__file__).parents:
+		# 	if (pr / 'wafer_root.wfrt').is_file():
+		# 		self.server_root = pr
+		# 		break
+		self.webroot = self.Path(__file__).parents[1]
+
 
 		# system root, aka root of the file pool
-		self.ftp_root = Path(self.sv_cfg['system_root'])
+		self.ftp_root = self.Path(self.sv_cfg['system_root'])
 		
 		# util db, like temp files and media previews
 		# preview_db
-		self.sysdb_path = Path(self.sv_cfg['sysdb'])
+		self.sysdb_path = self.Path(self.sv_cfg['sysdb'])
 
 		# enable cgi traceback asap
 		self.cgitb.enable(format='text', logdir=str(self.sysdb_path / 'cgi_err'))
 
 		# auth db path
-		self.authdb_path = Path(self.sv_cfg['authdb'])
+		self.authdb_path = self.Path(self.sv_cfg['authdb'])
 
 		# temp dir for temp files
 		self.tmp_dir = self.sysdb_path / 'temps'

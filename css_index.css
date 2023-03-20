@@ -1,24 +1,24 @@
 /* Core */
-@import url('mods_c/core/core.css');
-@import url('mods_c/core/dropdowns.css');
-@import url('mods_c/core/simple_menus_style.css');
+@import url('/js_client/core/core.css');
+@import url('/js_client/core/dropdowns.css');
+@import url('/js_client/core/simple_menus_style.css');
 
 /* Home */
-@import url('mods_c/home/home.css');
+@import url('/js_client/home/home.css');
 
 /*sys chooser*/
-@import url('mods_c/sys_chooser/sys_choose.css');
+@import url('/js_client/sys_chooser/sys_choose.css');
 
 /* video manager */
-@import url('mods_c/vidman/vidman.css');
-@import url('mods_c/vidman/vidman_admin.css');
+@import url('/js_client/vidman/vidman.css');
+@import url('/js_client/vidman/vidman_admin.css');
 
 /* login */
-@import url('mods_c/login/login.css');
+@import url('/js_client/login/login.css');
 
 
 /* admin */
-@import url('mods_c/admin/admin.css');
+@import url('/js_client/admin/admin.css');
 
 /* main file pool */
-@import url('mods_c/main_pool/main_pool.css');
+@import url('/js_client/main_pool/main_pool.css');

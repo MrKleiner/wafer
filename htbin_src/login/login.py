@@ -75,4 +75,4 @@ actions = md_actions(
 		'whoami': login_class.whoami,
 	}
 )
-actions.eval_action()
+# actions.eval_action()

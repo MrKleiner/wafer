@@ -1,50 +1,10 @@
 
-
-
 /*
+!~~ #msg_pool .gui_msg
 ===============================================
                  Error messages
 ===============================================
 */
-
-.gui_msg.error svg [icon_fg]
-{
-	fill: red;
-}
-.gui_msg.warning svg [icon_fg]
-{
-	fill: orange;
-}
-
-#msg_pool .gui_msg.error
-{
-	background: #66312c;
-	border-color: #ff3f3f;
-}
-#msg_pool .gui_msg.warning
-{
-	background: #66512c;
-	border-color: #ff9e36;
-}
-
-.gui_msg.error .gui_msg_title
-{
-	color: #ff6e6e;
-}
-.gui_msg.warning .gui_msg_title
-{
-	color: #ffe06e;
-}
-
-.gui_msg.error .gui_msg_notice
-{
-	color: #ff6e6e;
-}
-.gui_msg.warning .gui_msg_notice
-{
-	color: #ffe06e;
-}
-
 
 #msg_pool
 {
@@ -54,25 +14,6 @@
 	width: fit-content;
 	margin: 30px;
 	z-index: 99999;
-}
-
-#msg_pool .gui_msg svg
-{
-	width: 19px;
-	height: 19px;
-	flex-shrink: 0;
-	margin-right: 8px;
-	user-select: none;
-}
-
-#msg_pool .gui_msg svg [cbg]
-{
-	fill: white;
-}
-
-#msg_pool .gui_msg:not(:first-child)
-{
-	margin-top: 20px;
 }
 
 #msg_pool .gui_msg
@@ -91,6 +32,14 @@
 	transition: 0.5s;
 }
 
+#msg_pool .gui_msg .gui_msg_title
+{
+	display: flex;
+	padding: 7px;
+	font-size: 18px;
+	background: rgba(0, 0, 0, 0.3);
+}
+
 #msg_pool .gui_msg .gui_msg_body
 {
 	color: #ffef9f;
@@ -101,19 +50,69 @@
 	overflow: hidden;
 }
 
-#msg_pool .gui_msg .gui_msg_title
-{
-	display: flex;
-	padding: 7px;
-	font-size: 18px;
-	background: rgba(0, 0, 0, 0.3);
-}
-
-
 #msg_pool .gui_msg .gui_msg_notice
 {
 	background: rgba(0, 0, 0, 0.15);
 	padding: 5px;
+}
+
+
+#msg_pool .gui_msg:not(:first-child)
+{
+	margin-top: 20px;
+}
+
+
+#msg_pool .gui_msg.error svg [icon_fg]
+{
+	fill: red;
+}
+#msg_pool .gui_msg.warning svg [icon_fg]
+{
+	fill: orange;
+}
+
+#msg_pool .gui_msg.error
+{
+	background: #66312c;
+	border-color: #ff3f3f;
+}
+#msg_pool .gui_msg.warning
+{
+	background: #66512c;
+	border-color: #ff9e36;
+}
+
+#msg_pool .gui_msg.error .gui_msg_title
+{
+	color: #ff6e6e;
+}
+#msg_pool .gui_msg.warning .gui_msg_title
+{
+	color: #ffe06e;
+}
+
+#msg_pool .gui_msg.error .gui_msg_notice
+{
+	color: #ff6e6e;
+}
+#msg_pool .gui_msg.warning .gui_msg_notice
+{
+	color: #ffe06e;
+}
+
+#msg_pool .gui_msg svg
+{
+	width: 19px;
+	height: 19px;
+	flex-shrink: 0;
+	margin-right: 8px;
+	user-select: none;
+}
+
+#msg_pool .gui_msg svg [cbg]
+{
+	fill: white;
 }
 
 #msg_pool .gui_msg .nodisplay
@@ -123,6 +122,11 @@
 
 
 
+/*
+===============================================
+-----------------------------------------------
+===============================================
+*/
 
 
 
@@ -132,6 +136,20 @@
 
 
 
+
+/*
+===============================================
+                 Global App Tobar
+===============================================
+*/
+
+
+
+/*
+===============================================
+-----------------------------------------------
+===============================================
+*/
 
 
 

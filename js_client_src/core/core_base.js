@@ -7,6 +7,7 @@ const wafer_version = '$WAFER_VERSION_NUMBER$';
 const obj_url = (window.URL || window.webkitURL);
 
 const htbin = 'htbin';
+const jwt_hname = 'wafer-jwt';
 
 const _dev = true;
 const _rawpy = false;
@@ -137,7 +138,7 @@ const gui_msg = async function(msg_info){
 	const mconf = { ..._defaults, ...msg_info };
 	const icon_dict = {
 		'error': svg_icon_cache['err_cross'],
-		'warning': icon_warn['warn_triangle'],
+		'warning': svg_icon_cache['warn_triangle'],
 	};
 	const msg = $(`
 		<div class="gui_msg ${mconf.type}">
@@ -184,11 +185,12 @@ const file_to_bytes = async function(file, doblob=false)
 //
 
 
+// todo this anon function is not needed. Isolate context with {}
 const action_registry = {};
 
 (function() {
 
-	const _act_gateway = function(event, evt_type){
+	const _act_gateway_v0 = function(event, evt_type){
 		const target_elem = event.target.closest('[wfact]');
 		if (target_elem){
 			const action = action_registry[target_elem.getAttribute('wfact')];
@@ -200,12 +202,27 @@ const action_registry = {};
 		}
 	}
 
+	const _act_gateway = function(event, evt_type){
+		const target_elem = event.target.closest('[wfact]');
+		if (target_elem){
+			const acts = target_elem.getAttribute('wfact').split(',');
+			for (let act of acts){
+				const action = action_registry[act];
+				if (!action){continue}
+				if (action.type == evt_type){
+					// console.log(action_registry, action)
+					action.exec(event, target_elem)
+				}
+			}
+		}
+	}
+
 	const _listen_events = [
 		'click',
 		'input',
 		'contextmenu',
 		'keydown',
-		'mousemove',
+		// 'mousemove',
 		'wheel',
 	];
 
@@ -243,7 +260,7 @@ const sysloader = async function(panelname=null, as_return=false)
 		'headers': {
 			'accept': '*/*',
 			'cache-control': 'no-cache',
-			'pragma': 'no-cache'
+			'pragma': 'no-cache',
 		},
 		'method': 'GET',
 		'mode': 'cors',
@@ -262,64 +279,96 @@ const sysloader = async function(panelname=null, as_return=false)
 
 
 
-// prms: URL parameters to pass to the CGI script
-// rqt: rquest type (post/get)
-// payload: payload to send. Has to be proper shit and not raw objects
-// as: treat response as text/json/buffer
-// $this.py_cmd = async function(mod='', rqt='post', prms={}, payload='', load_as='text')
-const _pycmd_defaults = {
-	'module': '',
-	'rqt': 'post',
-	'prms': {},
-	'payload': '',
-	'load_as': 'text'
-}
-const py_cmd = async function(rprms={})
+// method:         get/post
+// prms:           a dictionary of query string parameters
+// payload:        needed for post: A blob representing data to be sent to the server
+// load_as:        treat response as text/json/buffer/blob
+// return_query:   return a final request url string and don't do anything else. Default to false
+// enable_cache:   whether to enable caching or not. Default is set to no cache at any circumstances
+// omit_creds:     whether to omit credentials like cookies n shit. Default to false
+const py_cmd = async function(pymodule=null, rprms=null)
 {
-	// overwrite defaults with new
-	const config = { ..._pycmd_defaults, ...rprms };
+	if (!pymodule || !rprms){
+		console.error('py cmd: Insufficient params:', pymodule, rprms);
+		return
+	}
 
+	// default headers
 	const rq_headers = {
-		'accept': '*/*',
+		'accept':        '*/*',
 		'cache-control': 'no-cache',
-		'pragma': 'no-cache'
+		'pragma':        'no-cache',
+	}
+	// default config
+	const pycmd_defaults = {
+		// module is always autofilled now
+		'module': '',
+
+		'method':       'post',
+		'prms':         {},
+		'payload':      '',
+		'load_as':      'text',
+		'return_query': false,
+		'enable_cache': false,
+		'omit_creds':   false,
+	}
+	// overwrite default config with provided
+	const config = { ...pycmd_defaults, ...rprms };
+
+	// add jwt token to the headers list if it's present
+	const jwt_token = window.localStorage.getItem('auth_token');
+	if (jwt_token){
+		rq_headers[jwt_hname] = add_jwt;
 	}
 
-	const add_jwt = window.localStorage.getItem('auth_token')
-	if (add_jwt){
-		rq_headers['jwt'] = add_jwt
-	}
+	// split py file path and module action
+	const mwa_split = pymodule.split('.');
+
+	// specify action
+	// todo: is this really a good way to handle actions ?
+	// todo: is .at() slower than [1] ?
+	config.prms['action'] = mwa_split.at(-1).trim();
 
 	// convert params to URL params
 	const urlParams = new URLSearchParams(config.prms);
 
 	// construct the final request URL
-	const tgt_url = `${htbin}/${config.module}.${_rawpy ? 'py' : 'pyc'}?${urlParams.toString()}`;
+	const tgt_url = `${htbin}/${mwa_split[0].trim()}.${_rawpy ? 'py' : 'pyc'}?${urlParams.toString()}`;
+
+	// sometimes it's needed to return a final request url string and don't do anything else
+	if (return_query){
+		return tgt_url
+	}
 
 	// exec...
 	return new Promise(async function(resolve, reject){
+		const request_method = config.method.toLowerCase();
 
-		if (config.rqt.toLowerCase() == 'post'){
+		const cache_condition = config.enable_cache ? 'default' : 'no-store'
+
+		if (request_method == 'post'){
 			// convert payload to BLOB
 			const pl = new Blob([config.payload], {type: 'text/plain'});
 
 			var response =
 			await fetch(tgt_url, {
-				'headers': rq_headers,
-				'method': 'POST',
-				'body': pl,
-				'mode': 'cors',
-				'credentials': 'omit'
+				'headers':     rq_headers,
+				'method':      'POST',
+				'body':        pl,
+				'mode':        'cors',
+				'credentials': 'include',
+				'cache':       cache_condition,
 			})
 		}
 
-		if (config.rqt.toLowerCase() == 'get'){
+		if (request_method == 'get'){
 			var response =
 			await fetch(tgt_url, {
-				'headers': rq_headers,
-				'method': 'GET',
-				'mode': 'cors',
-				'credentials': 'omit'
+				'headers':     rq_headers,
+				'method':      'GET',
+				'mode':        'cors',
+				'credentials': 'include',
+				'cache':        cache_condition,
 			})
 		}
 
@@ -333,7 +382,6 @@ const py_cmd = async function(rprms={})
 		if (response.headers.get('wafer-fatal-error') != null){
 			const rtext = await response.text()
 			console.error(`py_cmd: The response sez that a fatal error has occured on the server (${response.headers.get('wafer-fatal-error')}):`, rtext)
-			// $this.display_fatal_error(response.headers.get('wafer-fatal-error'))
 			gui_msg({
 				type: 'error',
 				title: `The server has reported a fatal error: ${response.headers.get('wafer-fatal-error')}`,
@@ -377,6 +425,11 @@ const py_cmd = async function(rprms={})
 		if (config.load_as == 'buffer'){
 			// resolve(bin)
 			resolve(new Uint8Array(await response.arrayBuffer()))
+			return
+		}
+		if (config.load_as == 'blob'){
+			// todo: I SURE HOPE THAT THIS DOES NOT PERMANENTLY CACHE THIS BLOB IN ANY WAY
+			resolve(await response.blob())
 			return
 		}
 		console.warn(`py_cmd (${rqt}): falling back to default data type (text), because ${config.load_as} is an unknown type`);

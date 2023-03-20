@@ -137,15 +137,15 @@ class wfauth:
 	# and this function is responsible for validating that the provided userid can be used
 	# theoretically, if crypto part of JWT is skipped, then anyone can access anyone's account by simply changing their userid
 	def jwt_auth(self):
-		provided_jwt = self.srv.headers.get('jwt')
+		provided_jwt = self.srv.headers.get('jwt') or self.srv.cookies.get('wafer-jwt')
 		# if userid (and therefore the rest of jwt) is not present, then auth the request with a default user
 		if provided_jwt == None:
-			self.guest = True
-			self.isadmin = False
-			self.userid = (self.srv.authdb_path / 'authsys' / 'cfg' / 'default_user').read_text()
-			details_path = self.srv.authdb_path / 'authsys' / 'details' / self.userid
-			self.usr_path = details_path
-			self.usr_info = self.srv.jload(details_path / 'info.lzrd')
+			self.guest =     True
+			self.isadmin =   False
+			self.userid =    (self.srv.authdb_path / 'authsys' / 'cfg' / 'default_user').read_text()
+			details_path =   self.srv.authdb_path / 'authsys' / 'details' / self.userid
+			self.usr_path =  details_path
+			self.usr_info =  self.srv.jload(details_path / 'info.lzrd')
 
 			self.srv.set_header('wafer-guest', 'yes')
 			return
@@ -171,6 +171,7 @@ class wfauth:
 		details_path = self.srv.authdb_path / 'authsys' / 'details' / userid
 
 		# if no user was found under specified id - reject the request
+		# todo: Less descriptive description to avoid bruteforce ?
 		if not details_path.is_dir():
 			self.srv.fatal_error('invalid_userid')
 			self.srv.flush_json({
@@ -191,11 +192,11 @@ class wfauth:
 			return
 
 		# if validation went fine, then set system variables for further actions
-		self.guest = False
-		self.userid = userid
-		self.usr_path = details_path
-		self.usr_info = self.srv.jload(details_path / 'info.lzrd')
-		self.isadmin = (self.usr_info['isadmin'] == True)
+		self.guest =     False
+		self.userid =    userid
+		self.usr_path =  details_path
+		self.usr_info =  self.srv.jload(details_path / 'info.lzrd')
+		self.isadmin =   (self.usr_info['isadmin'] == True)
 
 		self.srv.set_header('wafer-admin', self.isadmin)
 

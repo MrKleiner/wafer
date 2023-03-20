@@ -82,7 +82,7 @@ const _example2 = {
 	},
 }
 
-
+// a single user
 class usr_ctrl
 {
 	constructor(usr_info={}) {

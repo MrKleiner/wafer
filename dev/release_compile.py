@@ -98,14 +98,17 @@ _common_dirs = (
 	'assets',
 	'html_panels',
 	'js_client',
-	'wsys',
+	# 'wsys',
 	'setup',
 )
 for dtree in _common_dirs:
-	duplicate(project / _common_dirs, release_dir_web, release_dir_web_win)
+	duplicate(project / dtree, release_dir_web, release_dir_web_win)
 
 # copy htbin (python scripts)
 duplicate(project / 'htbin_src', release_dir_web, release_dir_web_win, _ignore=('jag.py',))
+
+# copy wsys
+duplicate(project / 'wsys', release_dir, release_dir_win, _ignore=('jag.py',))
 
 
 # copy wafer_util from wsys to htbin_src
@@ -174,6 +177,7 @@ jag_burns = {
 	'$JAG_JATEWAY_ACTION_NOT_FOUND_MSG$': 'raw_exception',
 	# important todo: this has to be configurable
 	'$JAG_X_FILES_HNAME$':                'X-Sendfile',
+	'$JAG_ACT_URL_PRM_NAME$':             'action',
 }
 server_entry = (
 	dict_replace(Path(conf['jag']).read_text().strip(), jag_burns),
@@ -184,6 +188,26 @@ write_file(
 	'\n\n'.join(server_entry),
 	release_dir_web     / 'htbin_src' / 'server.py',
 	release_dir_web_win / 'htbin_src' / 'server.py'
+)
+
+# TEST
+# Collapse all jslibs into one a single file
+# Todo: is this really needed?
+# It's not that big of a deal really...
+write_file(
+	'\n\n'.join([
+		(project / 'apis/jquery/3_6_0/jquery.min.js'        ).read_text(),
+		(project / 'apis/crypto_js/4_1_1/crypto-js.min.js'  ).read_text(),
+		(project / 'apis/toolbox/toolbox.js'                ).read_text(),
+		(project / 'apis/jszip/3_2_0/jszip.min.js'          ).read_text(),
+		(project / 'apis/filesaverjs/2_0_4/filesaver.min.js').read_text(),
+		# (project / 'apis/gigabin_js/gigabin.js'           ).read_text(),
+		(project / 'apis/wavesurfer/6_3_0/wavesurfer.js'    ).read_text(),
+		(project / 'apis/fuck_js/fix-webm-duration.js'      ).read_text(),
+
+	]),
+	release_dir_web     / 'apis' / 'composite.js',
+	release_dir_web_win / 'apis' / 'composite.js'
 )
 
 
