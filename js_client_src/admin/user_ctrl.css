@@ -1,0 +1,256 @@
+
+
+*
+{
+	padding: 0px;
+	margin: 0px;
+	font-family: 'Arial';
+}
+html, body
+{
+	background: #181C1F;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+input[type='text'], input[type='number']
+{
+    color: white;
+    border: none;
+    /*     border-radius: 4px; */
+    background: black;
+    padding: 3px;
+    outline: 1px solid rgba(255, 255, 255, 0.4);
+}
+input[type='text']:focus, input[type='number']:focus
+{
+    outline: 1px solid #1b8d4e;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+#panel_root
+{
+    border-left: 5px solid white;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 20px;
+    padding: 5px;
+}
+
+#panel_root .user
+{
+    margin-top: 20px;
+    margin-left: 10px;
+    /* 	padding: 5px; */
+    outline: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+#panel_root .username
+{
+    padding: 5px;
+    color: white;
+    font-size: 20px;
+    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+
+
+
+
+
+#panel_root .usr_param_row
+{
+    display: flex;
+    align-items: center;
+    color: white;
+    padding: 3px;
+    /* 	outline: 1px solid rgba(255, 255, 255, 0.1); */
+}
+
+#panel_root .usr_param_row .label
+{
+    width: 140px;
+    user-select: none;
+}
+
+#panel_root .usr_param_row input[type="text"]
+{
+    width: 30%;
+    min-width: 250px;
+    max-width: 300px;
+}
+#panel_root .usr_param_row input[type="checkbox"]
+{
+    width: 20px;
+    height: 20px;
+}
+#panel_root .usr_param_row input[type="number"]
+{
+    width: 50px;
+}
+
+
+
+#panel_root .main_usr_params,
+#panel_root .shared_ruleset
+{
+    margin-left: 3px;
+}
+
+
+
+#panel_root .user_perms
+{
+    display: flex;
+    flex-direction: column;
+    margin: 5px;
+    margin-top: 10px;
+    max-width: 500px;
+    min-width: 300px;
+    margin-left: 20px;
+    outline: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#panel_root .user_perms .usr_param_row:hover
+{
+    background: rgba(255, 255, 255, 0.05);
+}
+
+#panel_root .user_perms .usr_param_row
+{
+    display: flex;
+    align-items: center;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+#panel_root .tgt_rulesets
+{
+    display: flex;
+    flex-direction: column;
+    margin: 20px;
+    outline: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.tgt_rulesets .tgt_rulesets_title
+{
+    color: white;
+    padding: 7px;
+    background: rgba(0, 0, 0, 0.1);
+    user-select: none;
+}
+
+.tgt_rulesets .tgt_rulesets_pool
+{
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+.tgt_rulesets .tgt_rulesets_pool rule
+{
+    display: flex;
+    flex-direction: column;
+    margin-top: 20px;
+    border-left: 2px solid gray;
+    padding: 2px;
+    padding-left: 7px;
+}
+.tgt_rulesets .tgt_rulesets_pool rule:hover
+{
+    background: rgba(255, 255, 255, 0.01)
+}
+
+
+
+.tgt_rulesets_pool .usr_param_row input[type="checkbox"]
+{
+	width: 17px !important;
+	height: 17px !important;
+}
+.tgt_rulesets_pool .usr_param_row[prm_name="rule"] input[type="text"]
+{
+	width: 80% !important;
+  max-width: unset !important;
+}
+.tgt_rulesets_pool .usr_param_row .label
+{
+    width: 100px !important;
+}
+.tgt_rulesets_pool .usr_param_row
+{
+    padding: 0px !important;
+    margin: 2px;
+    margin-top: 3px;
+}
+
+
+
+
+.tgt_rulesets_pool rule:not([for_enabled]) .usr_param_row[prm_name="deep"],
+.tgt_rulesets_pool rule:not([for_enabled]) .usr_param_row[prm_name="with_name"]
+{
+	opacity: 0.4;
+	user-select: none;
+	pointer-events: none;
+}
+
+
+.tgt_rulesets_pool rule[for_enabled] .usr_param_row
+{
+	opacity: 1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

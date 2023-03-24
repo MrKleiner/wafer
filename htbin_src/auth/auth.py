@@ -15,7 +15,7 @@ class wfauth:
 		self.srv = srv
 		import base64
 		self.b64 = base64
-		from .access_resolver import resolver
+		from access_resolver import resolver
 		self.pth_auth = resolver
 
 		# in the new system guests are strictly limited

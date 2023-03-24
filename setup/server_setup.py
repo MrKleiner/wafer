@@ -175,13 +175,13 @@ class srv_setup:
 				'homedir':            '/',
 				'target': [
 					{
-						'rule': '/',
-						'prohibit': False,
-						'write': True,
+						'rule':      '/',
+						'prohibit':  False,
+						'write':     True,
 						'recursive': False,
 						'for_each': {
-							'use': False,
-							'deep': 2,
+							'use':       False,
+							'deep':      2,
 							'with_name': '@@',
 						}
 					}

@@ -4,6 +4,7 @@ const _example1 = {
 	'server_render': true,
 	'torrenting': false,
 	'edit_thumbs': true,
+	'recursive_nav': false,
 	'userid': '1337',
 	'login': 'Sex bomb',
 	'pswd': 'lol',
@@ -45,6 +46,7 @@ const _example2 = {
 	'edit_self': false,
 	'server_render': false,
 	'torrenting': true,
+	'recursive_nav': false,
 	'edit_thumbs': true,
 	'userid': '7979',
 	'login': 'Door',
@@ -82,151 +84,270 @@ const _example2 = {
 	},
 }
 
+// 
+// parameter type definitions
+// 
+const base_params_types = {
+	'login':   'input.text',
+	'pswd':    'input.text',
+	'homedir': 'input.text',
+}
+const perms_types = {
+	'isadmin':       'bool',
+	'edit_self':     'bool',
+	'server_render': 'bool',
+	'torrenting':    'bool',
+	'edit_thumbs':   'bool',
+	'recursive_nav': 'bool',
+}
+const rules_types = {
+	'rule':      'input.text',
+	'write':     'bool',
+	'recursive': 'bool',
+	'prohibit':  'bool',
+	'use':       'bool',
+	'deep':      'input.num',
+	'with_name': 'input.text',
+}
+
+
+// 
+// iterators
+// 
+const base_params_iter = {
+	'login': 'Username:',
+	'pswd':  'Password:',
+}
+const perms_iter = {
+	'isadmin':       'Admin',
+	'edit_self':     'Self Edit',
+	'server_render': 'Server Render',
+	'torrenting':    'Torrenting',
+	'edit_thumbs':   'Edit Previews',
+	'recursive_nav': 'Recursive Nav',
+}
+const rule_shared_iter = {
+	'homedir': 'Homedir:',
+}
+
+const rule_base_iter = {
+	'rule':      'Path:',
+	'prohibit':  'Prohibit',
+	'write':     'Write',
+	'recursive': 'Recursive',
+}
+
+const rule_feach_iter = {
+	'use':       'For Each',
+	'deep':      'Depth',
+	'with_name': 'With name:',
+}
+
+
+
+const params_html = {
+	'input.text': function(label, paramname, val='none'){
+		return $(`
+			<div prm_name="${paramname}" class="usr_param_row">
+				<div class="label">${label}</div>
+				<input value="${val}" type="text">
+			</div>
+		`)
+	},
+	'input.num': function(label, paramname, val=0){
+		return $(`
+			<div prm_name="${paramname}" class="usr_param_row">
+				<div class="label">${label}</div>
+				<input value="${val}" type="number">
+			</div>
+		`)
+	},
+	'bool': function(label, paramname, val=false){
+		return $(`
+			<div prm_name="${paramname}" class="usr_param_row">
+				<div class="label">${label}</div>
+				<input ${val ? 'checked' : ''} type="checkbox">
+			</div>
+		`)
+	},
+}
+
+const rip_types = {
+	'input.text': function(elem){
+		return $(elem).find('input')[0].value
+	},
+	'input.num': function(elem){
+		return $(elem).find('input')[0].value
+	},
+	'bool': function(elem){
+		return $(elem).find('input')[0].checked
+	},
+}
+
+
+
+
 // a single user
 class usr_ctrl
 {
-	constructor(usr_info={}) {
+	constructor(_usr_info=null) {
+		// adding new params:
+		// 1 - Add to defaults
+		// 2 - Add to type definition
+		// 3 - Add to iterators
+		// 4 - Add to creation
 		this.modified = false;
-		this.deleted = false;
+		// marks this user for deletion
+		this.deleted  = false;
+		// whether it's a newly created user or not
+		// this is flipped to true if _usr_info is left as null
+		this.new      = false;
+
+		const _defaults = {
+			'isadmin':       false,
+			'edit_self':     false,
+			'server_render': false,
+			'torrenting':    false,
+			'edit_thumbs':   false,
+			'recursive_nav': false,
+			'userid':        null,
+			'login':         'Sexbomb',
+			'pswd':          'pwnt',
+			// 'shared_ruleset': 'shared_rule',
+			'rules': {
+				'global':             [],
+				'shared_rule':        null,
+				'apply_shared_after': false,
+				'homedir':            '/',
+				'target':             [],
+			},
+		}
+
+		if (_usr_info == null){
+			this.new = true;
+		}
+
+		const usr_info = this.new ? _defaults : { ..._defaults, ..._usr_info };
+		console.log('USER INFO', usr_info)
+
 		this.userid = usr_info.userid;
 
-		this.usr_elem = $(`
+		// create the base frame for all the other elements
+		const usr_frame = $(`
 			<div class="user">
-				<div class="username">${usr_info.login}</div>
-
-				<div class="username_input">
-					<div class="label">Username:</div>
-					<input value="${usr_info.login}" type="text">
-				</div>
-				<div class="password">
-					<div class="label">Password:</div>
-					<input value="${usr_info.pswd}" type="text">
-				</div>
-				<div class="homedir">
-					<div class="label">Homedir:</div>
-					<input value="${usr_info.rules.homedir}" type="text">
-				</div>
-
-				<div class="shared_ruleset">
+				<div usrprm="login" class="username">${usr_info.login}</div>
+				<div class="main_usr_params"></div>
+				<div class="shared_ruleset usr_param_row">
 					<div class="label">Shared ruleset:</div>
-					<select>
-					</select>
+					<select></select>
 				</div>
 				<div class="global_ruleset"></div>
-				<div class="user_perms">
-					<div prm="isadmin" class="user_perm_row">
-						<div class="user_perm_row_label">Admin</div>
-						<input ${usr_info.isadmin ? 'checked' : ''} type="checkbox">
-					</div>
-					<div prm="edit_self" class="user_perm_row">
-						<div class="user_perm_row_label">Self Edit</div>
-						<input ${usr_info.edit_self ? 'checked' : ''} type="checkbox">
-					</div>
-					<div prm="server_render" class="user_perm_row">
-						<div class="user_perm_row_label">Server Render</div>
-						<input ${usr_info.server_render ? 'checked' : ''} type="checkbox">
-					</div>
-					<div prm="torrenting" class="user_perm_row">
-						<div class="user_perm_row_label">Torrenting</div>
-						<input ${usr_info.torrenting ? 'checked' : ''} type="checkbox">
-					</div>
-					<div prm="edit_thumbs" class="user_perm_row">
-						<div class="user_perm_row_label">Edit Previews</div>
-						<input ${usr_info.edit_thumbs ? 'checked' : ''} type="checkbox">
-					</div>
-				</div>
+				<div class="user_perms"></div>
 				<div class="tgt_rulesets">
 					<div class="tgt_rulesets_title">Rules</div>
 					<div class="tgt_rulesets_pool"></div>
 				</div>
 			</div>
 		`);
-		
-		this.rule_pool = this.usr_elem.find('.tgt_rulesets .tgt_rulesets_pool');
-		this.shared_rule_sel = this.usr_elem.find('.shared_ruleset select')[0];
-		
-		// spawn regular rules
-		for (let usr_rule of usr_info.rules.target){
-			this.rule_pool.append(`
-				<rule ${usr_rule.for_each.use ? 'for_enabled' : ''}>
-						<rule-path>
-							<wflabel>Path:</wflabel>
-							<input value="${usr_rule.rule}" type="text">
-						</rule-path>
-						<rule-perms>
-							<prohibit class="rule_perm">
-								<wflabel>Prohibit</wflabel>
-								<input ${usr_rule.prohibit ? 'checked' : ''} type="checkbox">
-							</prohibit>
-							<can-write class="rule_perm">
-								<wflabel>Write</wflabel>
-								<input ${usr_rule.write ? 'checked' : ''} type="checkbox">
-							</can-write>
-							<recursive class="rule_perm">
-								<wflabel>Recursive</wflabel>
-								<input ${usr_rule.recursive ? 'checked' : ''} type="checkbox">
-							</recursive>
-							<for-each class="rule_perm">
-								<wflabel>For Each:</wflabel>
-								<input ${usr_rule.for_each.use ? 'checked' : ''} type="checkbox">
-							</for-each>
-							<depth class="rule_perm">
-								<wflabel>Depth:</wflabel>
-								<input value="${usr_rule.for_each.deep || '0'}" type="number">
-							</depth>
-							<with-name class="rule_perm">
-								<wflabel>With Name:</wflabel>
-								<input value="${usr_rule.for_each.with_name || ''}" type="text">
-							</with-name>
-						</rule-perms>
-					</rule>
-			`);
+
+		// store references to sections of the frame
+		this.usr_elem = {
+			root:           usr_frame,
+			login_title:    usr_frame.find('.login'),
+			main_prms:      usr_frame.find('.main_usr_params'),
+			shared_ruleset: usr_frame.find('.shared_ruleset select'),
+			permissions:    usr_frame.find('.user_perms'),
+			rules_list:     usr_frame.find('.tgt_rulesets .tgt_rulesets_pool'),
+		};
+
+		// create base params
+		for (let prm in base_params_iter){
+			this.usr_elem.main_prms.append(
+				params_html[base_params_types[prm]](base_params_iter[prm], prm, usr_info[prm])
+			)
 		}
-		
-		// Do not populate shared ruleset, because it's later evaluated on each expand
-		if (usr_info.rules.shared_rule){
-			this.shared_rule_sel.add($(`<option value="${usr_info.rules.shared_rule}">${usr_info.rules.shared_rule}</option>`)[0]);
-			this.shared_rule_sel.value = usr_info.rules.shared_rule;
+		// shared rule params
+		for (let prm in rule_shared_iter){
+			this.usr_elem.main_prms.append(
+				params_html[base_params_types[prm]](rule_shared_iter[prm], prm, usr_info.rules[prm])
+			)
+		}
+		// permissions
+		for (let prm in perms_iter){
+			this.usr_elem.permissions.append(
+				params_html[perms_types[prm]](perms_iter[prm], prm, usr_info[prm])
+			)
+		}
+
+		// rules
+		for (let rule of usr_info.rules.target){
+			const rule_frame = $(`
+				<rule ${rule.for_each.use ? 'for_enabled' : ''}></rule>
+			`);
+
+			// base params
+			for (let rbase in rule_base_iter){
+				rule_frame.append(
+					params_html[rules_types[rbase]](rule_base_iter[rbase], rbase, rule[rbase])
+				)
+			}
+			// for each params
+			for (let feach in rule_feach_iter){
+				rule_frame.append(
+					params_html[rules_types[feach]](rule_feach_iter[feach], feach, rule.for_each[feach])
+				)
+			}
+			this.usr_elem.rules_list.append(rule_frame)
 		}
 
 		// append rule to the pool
-		$('#panel_root').append(this.usr_elem)
+		$('#panel_root').append(usr_frame);
 	}
 
 	dump(){
 		// console.log(this.usr_elem)
-		var usr_info = {
-			'isadmin':        this.usr_elem.find('.user_perms [prm="isadmin"] input')[0].checked,
-			'edit_self':      this.usr_elem.find('.user_perms [prm="edit_self"] input')[0].checked,
-			'server_render':  this.usr_elem.find('.user_perms [prm="server_render"] input')[0].checked,
-			'torrenting':     this.usr_elem.find('.user_perms [prm="torrenting"] input')[0].checked,
-			'edit_thumbs':    this.usr_elem.find('.user_perms [prm="edit_thumbs"] input')[0].checked,
-			'userid':         this.userid,
-			'login':          this.usr_elem.find('.username_input input').val().trim(),
-			'pswd':           this.usr_elem.find('.password input').val().trim(),
-			// 'shared_ruleset': this.usr_elem.find('.shared_ruleset select')[0].value,
+
+		const usr_info = {
 			'rules': {
 				'global': [],
-				'shared_rule':        this.usr_elem.find('.shared_ruleset select')[0].value,
-				'apply_shared_after': false,
-				'homedir':            this.usr_elem.find('.homedir input').val().trim(),
 				'target': [],
-			},
-		};
+			}
+		}
 
-		for (let _tgtr of this.usr_elem[0].querySelectorAll('.tgt_rulesets .tgt_rulesets_pool rule')){
-			const tgtr = $(_tgtr);
-			usr_info.rules.target.push({
-				'rule':         tgtr.find('rule-path input').val().trim(),
-				'prohibit':     tgtr.find('rule-perms prohibit input')[0].checked,
-				'write':        tgtr.find('rule-perms can-write input')[0].checked,
-				'recursive':    tgtr.find('rule-perms recursive input')[0].checked,
-				'for_each': {
-					'use':       tgtr.find('rule-perms for-each input')[0].checked,
-					'deep':      parseInt(tgtr.find('rule-perms depth input')[0].value),
-					'with_name': tgtr.find('rule-perms with-name input')[0].value,
-				}
-			})
+		// base params
+		for (let prm in base_params_iter){
+			const param_elem = this.usr_elem.main_prms.find(`[prm_name="${prm}"]`);
+			// console.log(prm, param_elem, rip_types[base_params_types[prm]])
+			usr_info[prm] = rip_types[base_params_types[prm]](param_elem)
+		}
+		// shared rule params
+		for (let prm in rule_shared_iter){
+			const param_elem = this.usr_elem.main_prms.find(`[prm_name="${prm}"]`);
+			usr_info.rules[prm] = rip_types[base_params_types[prm]](param_elem)
+		}
+		// permissions
+		for (let prm in perms_iter){
+			const param_elem = this.usr_elem.permissions.find(`[prm_name="${prm}"]`);
+			usr_info[prm] = rip_types[perms_types[prm]](param_elem)
+		}
+
+		// rules
+		for (let rule of $(this.usr_elem.rules_list)[0].querySelectorAll('rule')){
+			const rule_frame = {
+				'for_each': {}
+			}
+
+			// base params
+			for (let rule_param in rule_base_iter){
+				const param_elem = $(rule).find(`[prm_name="${rule_param}"]`);
+				rule_frame[rule_param] = rip_types[rules_types[rule_param]](param_elem)
+			}
+			// for each params
+			for (let feach in rule_feach_iter){
+				const param_elem = $(rule).find(`[prm_name="${feach}"]`);
+				rule_frame.for_each[feach] = rip_types[rules_types[feach]](param_elem)
+			}
+			usr_info.rules.target.push(rule_frame)
 		}
 
 		return usr_info
@@ -236,18 +357,18 @@ class usr_ctrl
 	kill(){
 		this.deleted = true;
 		this.modified = true;
-		this.usr_elem.remove();
+		this.usr_elem.root.remove();
 	}
 }
 
 
 
-// const oof1 = new usr_ctrl(_example1)
-// const oof2 = new usr_ctrl(_example2)
+const oof1 = new usr_ctrl(_example1)
+const oof2 = new usr_ctrl(_example2)
 
 
 
-// console.log([oof1.dump(), oof2.dump()])
+console.log([oof1.dump(), oof2.dump()])
 
 
 // $this.load = async function()

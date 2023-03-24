@@ -26,10 +26,11 @@ async function whoami(){
 $(document).ready(async function(){
 	// get current user info and store it in memory
 	await whoami()
-	// load an execute admin module if user is admin
+	// load and execute admin module if user is admin
 	if (window.usr_info.isadmin){
 		await import('/js_client/admin/admin.js')
 	}
-	await import('/js_client/auth/icons.js')
+	await import('/js_client/core/browser_detect.js')
+	await import('/js_client/core/icons.js')
 	await import('/js_client/auth/login.js')
 });

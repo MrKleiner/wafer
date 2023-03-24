@@ -282,7 +282,7 @@ const sysloader = async function(panelname=null, as_return=false)
 // method:         get/post
 // prms:           a dictionary of query string parameters
 // payload:        needed for post: A blob representing data to be sent to the server
-// load_as:        treat response as text/json/buffer/blob
+// load_as:        treat response as text/json/buffer/rawbuffer/blob
 // return_query:   return a final request url string and don't do anything else. Default to false
 // enable_cache:   whether to enable caching or not. Default is set to no cache at any circumstances
 // omit_creds:     whether to omit credentials like cookies n shit. Default to false
@@ -373,7 +373,7 @@ const py_cmd = async function(pymodule=null, rprms=null)
 		}
 
 		if (response.status == 404){
-			console.warn(`py_cmd: server responded with 404 to a ${rqt} request`);
+			console.warn(`py_cmd: server responded with 404 to a ${request_method} request`);
 			return
 		}
 
@@ -425,6 +425,10 @@ const py_cmd = async function(pymodule=null, rprms=null)
 		if (config.load_as == 'buffer'){
 			// resolve(bin)
 			resolve(new Uint8Array(await response.arrayBuffer()))
+			return
+		}
+		if (config.load_as == 'rawbuffer'){
+			resolve(await response.arrayBuffer())
 			return
 		}
 		if (config.load_as == 'blob'){
