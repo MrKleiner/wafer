@@ -1,4 +1,0 @@
-[submodule "src/wsys/jag"]
-	path = src/wsys/jag
-	url = https://github.com/MrKleiner/jag
-	branch = jag_wrench
