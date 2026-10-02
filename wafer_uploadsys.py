@@ -7,16 +7,18 @@ import contextlib
 from pathlib import Path
 
 from .wafer_util import *
-
+from .wafer_dbsys import DBAUploadInstance
 
 
 
 
 
 class WaferFileUploadChunkWriter(NamedPrint):
-	def __init__(self, chunk_size, chunk_fpath, declared_hash_hex):
-		self.chunk_size = chunk_size
-		self.chunk_fpath = chunk_fpath
+	def __init__(self, chunk_instance, declared_hash_hex):
+		self.chunk_instance =    chunk_instance
+		self.chunk_size =        chunk_instance.chunk_array.chunk_size
+		self.chunk_fpath =       chunk_instance.chunk_fpath
+
 		self.declared_hash_hex = declared_hash_hex
 
 		self.written_bytes_hash = None
@@ -42,21 +44,50 @@ class WaferFileUploadChunkWriter(NamedPrint):
 
 		if e_type:
 			self.chunk_fpath.unlink(missing_ok=True)
+			self.write_journal({
+				'okay_mate': False,
+				'descr':     str(e_val),
+			})
 			return
 
 		if self.written_bytes_hash.hexdigest() != self.declared_hash_hex:
 			self.chunk_fpath.unlink(missing_ok=True)
-			raise ValueError(
-				'FATAL: Hash mismatch'
-			)
+			msg = 'FATAL: Hash mismatch'
+
+			self.write_journal({
+				'okay_mate': False,
+				'descr':     msg,
+			})
+
+			raise ValueError(msg)
+
+		self.write_journal({
+			'okay_mate': True,
+			'descr':     f'Wrote {self.written_bytes_len}',
+		})
+
+	def write_journal(self, data):
+		self.chunk_instance.chunk_array.upload_instance.write_journal(
+			data | {
+				'tstamp':      unix_now(),
+				'chunk_index': self.chunk_instance.chunk_index,
+			}
+		)
 
 	def add_bytes(self, tgt_bytes):
 		self.written_bytes_len += len(tgt_bytes)
 		if self.written_bytes_len > self.chunk_size:
-			raise ValueError(
+			msg = (
 				f'Chunk size of len {self.written_bytes_len} '
 				f'exceeds the declared chunk size of {self.chunk_size}'
 			)
+
+			self.write_journal({
+				'okay_mate': False,
+				'descr':     msg,
+			})
+
+			raise ValueError(msg)
 
 		self.written_bytes_hash.update(tgt_bytes)
 		self.fbuf.write(tgt_bytes)
@@ -121,8 +152,7 @@ class WaferFileUploadChunkInstance(NamedPrint):
 		self._hash_matches = None
 
 		return WaferFileUploadChunkWriter(
-			self.chunk_array.chunk_size,
-			self.chunk_fpath,
+			self,
 			declared_hash_hex,
 		)
 
@@ -153,7 +183,10 @@ class WaferFileUploadChunkArray(NamedPrint):
 				f'is outside of declared bounds {self.chunk_amount}'
 			)
 
-		self.upload_instance.info_data['last_chunk_index'] = chunk_index
+		if self.count_retries() > self.upload_instance.info_data['max_retries']:
+			raise ValueError(
+				'A single chunk has exceeded maximum allowed amount of retries'
+			)
 
 		chunk_instance = WaferFileUploadChunkInstance(
 			self,
@@ -267,13 +300,9 @@ class WaferFileUploadChunkArray(NamedPrint):
 					while (chunk := chunk_fbuf.read(8192)):
 						fbuf.write(chunk)
 
-	def consume_retry(self):
-		self.upload_instance.info_data['last_chunk_retry_amount'] += 1
-		self.upload_instance.save_info()
-
-	def reset_retries(self):
-		self.upload_instance.info_data['last_chunk_retry_amount'] = 0
-		self.upload_instance.save_info()
+	def count_retries(self):
+		with DBAUploadInstance(self.upload_instance.root_dir, self.upload_instance.db_con) as dba:
+			return dba.count_retries() or 0
 
 
 
@@ -297,6 +326,8 @@ class WaferFileUploadInstance(NamedPrint):
 
 		self._chunk_array = None
 
+		self.db_con = None
+
 	@classmethod
 	def alloc(cls, uploads_dir, file_size, chunk_size=None):
 		for i in range(500):
@@ -314,22 +345,27 @@ class WaferFileUploadInstance(NamedPrint):
 			)
 			return False
 
-		with upload_instance.info_data.edit() as info_data:
-			info_data['chunk_size'] = max(
-				(chunk_size or cls.DEFAULT_CHUNK_SIZE_MB),
+		with DBAUploadInstance(upload_instance.root_dir) as dba:
+			dba.spawn()
 
-				# Has to be any positive int
-				8192
-			)
+			dba.apply_params({
+				'chunk_size': max(
+					(chunk_size or cls.DEFAULT_CHUNK_SIZE_MB),
 
-			info_data['chunk_amount'] = max(
-				math.ceil(
-					file_size / (chunk_size or cls.DEFAULT_CHUNK_SIZE_MB)
+					# Has to be any positive int
+					8192
 				),
+				'chunk_amount': max(
+					math.ceil(
+						file_size / (chunk_size or cls.DEFAULT_CHUNK_SIZE_MB)
+					),
 
-				# Make sure it's not negative
-				0
-			)
+					# Make sure it's not negative
+					0
+				),
+				'allocated_tstamp': unix_now(),
+				'max_retries':      cls.DEFAULT_MAX_RETRIES,
+			})
 
 		return upload_instance
 
@@ -356,37 +392,12 @@ class WaferFileUploadInstance(NamedPrint):
 		return self._chunks_dpath
 
 	@property
-	def info_fpath(self):
-		if self._info_fpath != None:
-			return self._info_fpath
-
-		self._info_fpath = self.root_dir / 'info.json'
-
-		return self._info_fpath
-
-	@property
 	def info_data(self):
 		if self._info_data != None:
 			return self._info_data
 
-		self._info_data = TDict()
-
-		if self.info_fpath.is_file():
-			self._info_data.real_dict = json.loads(
-				self.info_fpath.read_bytes()
-			)
-		else:
-			self._info_data.real_dict = {
-				'chunk_size':              None,
-				'chunk_amount':            None,
-				'allocated_tstamp':        unix_now(),
-				'last_upload_tstamp':      unix_now(),
-				'last_chunk_index':        0,
-				'last_chunk_retry_amount': 0,
-				'max_chunk_retry_amount':  self.DEFAULT_MAX_RETRIES,
-			}
-
-			self.save_info()
+		with DBAUploadInstance(self.root_dir) as dba:
+			self._info_data = dba.list_params()
 
 		return self._info_data
 
@@ -396,7 +407,6 @@ class WaferFileUploadInstance(NamedPrint):
 			return self._chunk_size
 
 		self._chunk_size = self.info_data['chunk_size']
-		self.save_info()
 
 		return self._chunk_size
 
@@ -406,7 +416,6 @@ class WaferFileUploadInstance(NamedPrint):
 			return self._chunk_amount
 
 		self._chunk_amount = self.info_data['chunk_amount']
-		self.save_info()
 
 		return self._chunk_amount
 
@@ -424,15 +433,27 @@ class WaferFileUploadInstance(NamedPrint):
 
 		return self._chunk_array
 
-	def save_info(self):
-		with self.info_data.edit() as info_data:
-			self.info_fpath.write_bytes(
-				json.dumps(info_data).encode()
-			)
+	def write_journal(self, data):
+		try:
+			with DBAUploadInstance(self.root_dir, self.db_con) as dba:
+				self._info_data = dba.write_journal(data)
+		except Exception as e:
+			self.nprint('Failed to write journal record:')
+			print_exception_framed(e)
 
+	@contextlib.contextmanager
+	def db_connect(self):
+		with DBAUploadInstance(self.root_dir) as dba:
+			self.db_con = dba.db_con
+			yield dba
 
+		self.db_con = None
 
+	@contextlib.contextmanager
+	def _db_connect(self):
+		yield None
 
+		self.db_con = None
 
 
 
