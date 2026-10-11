@@ -269,6 +269,11 @@ class DBActionsGeneric:
 		RETURNING *;
 	"""
 
+	Q_INSERT_RETURNING_EMPTY = """
+		INSERT OR IGNORE INTO %table DEFAULT VALUES
+		RETURNING *;
+	"""
+
 	def __init__(self, table, db_con):
 		self.table = table
 		self.db_con = db_con
@@ -333,7 +338,16 @@ class DBActionsGeneric:
 			data
 		)
 
-	def insert_returning(self, data):
+	def insert_returning(self, data=None):
+		if not data:
+			return (
+				self.db_con.exec(
+					self.Q_INSERT_RETURNING_EMPTY
+					.replace('%table', self.table)
+				)
+				.fetchone()
+			)
+
 		keys = data.keys()
 
 		return self.db_con.exec(
@@ -406,7 +420,6 @@ class DBAUploadInstance(NamedPrint):
 			self.db_con = None
 			self.reuse_db_con = None
 		else:
-			# self.nprint('Committing reused DB data')
 			self.db_con.commit()
 
 	def spawn(self):
@@ -448,5 +461,104 @@ class DBAUploadInstance(NamedPrint):
 
 
 
+class DBAUserData(NamedPrint):
+	SCHEME_FPATH = THISDIR / 'acl_data.sql'
 
+	TABLE_ACTIONS = (
+		'profiles',
+		'tokens',
+		'uploads',
+		'masks',
+		'mask_linkage',
+	)
+
+	Q_PULL_MASKS = """
+		SELECT
+			m.*,
+			ml.idx
+		FROM mask_linkage AS ml
+		JOIN masks AS m
+			ON m.mask_id = ml.mask_id
+		WHERE ml.userid = ?
+		ORDER BY ml.idx ASC;
+	"""
+
+	def __init__(self, parent_dir, db_con=None):
+		self.parent_dir = parent_dir
+		self.db_fpath = self.parent_dir / 'acl.wafer'
+
+		self.reuse_db_con = db_con
+		self.db_con = None
+
+		self.ta_profiles =     None
+		self.ta_tokens =       None
+		self.ta_uploads =      None
+		self.ta_masks =        None
+		self.ta_mask_linkage = None
+
+	def spawn(self):
+		if self.db_con:
+			self.db_con.exec_script(
+				self.SCHEME_FPATH.read_text()
+			)
+			return
+
+		with BasicDBConnection(self.db_fpath) as dbcon:
+			dbcon.exec_script(
+				self.SCHEME_FPATH.read_text()
+			)
+
+	def pull_masks(self, userid=None):
+		return tuple(
+			self.db_con.exec(
+				self.Q_PULL_MASKS,
+
+				(userid,)
+			)
+			.fetchall()
+		)
+
+	def apply_masks(self, userid, mask_id_array):
+		self.ta_mask_linkage.delete_generic(
+			'userid', userid
+		)
+
+		for idx, mask_id in enumerate(mask_id_array or ()):
+			self.ta_mask_linkage.insert_generic({
+				'userid':  userid,
+				'mask_id': mask_id,
+				'idx':     idx,
+			})
+
+		self.db_con.commit()
+
+	def __enter__(self):
+		self.db_con = self.reuse_db_con or BasicDBConnection(self.db_fpath)
+
+		for table_id in self.TABLE_ACTIONS:
+			setattr(
+				self,
+				f'ta_{table_id}',
+				DBActionsGeneric(
+					table_id,
+					self.db_con
+				)
+			)
+
+		return self
+
+	def __exit__(self, e_type, e_value, e_traceback):
+		if not self.reuse_db_con:
+			self.db_con.finish(e_type, e_value, e_traceback)
+
+			for table_id in self.TABLE_ACTIONS:
+				setattr(
+					self,
+					f'ta_{table_id}',
+					None
+				)
+
+			self.reuse_db_con = None
+		else:
+			self.db_con.commit()
 

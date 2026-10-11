@@ -265,9 +265,6 @@ class WaferFileUploadChunkArray(NamedPrint):
 			if len(broken_chunks) > limit:
 				break
 
-		if broken_chunks:
-			self.consume_retry()
-
 		return broken_chunks
 
 	def collapse_into(self, fpath):
@@ -301,7 +298,7 @@ class WaferFileUploadChunkArray(NamedPrint):
 						fbuf.write(chunk)
 
 	def count_retries(self):
-		with DBAUploadInstance(self.upload_instance.root_dir, self.upload_instance.db_con) as dba:
+		with self.upload_instance.edit_db() as dba:
 			return dba.count_retries() or 0
 
 
@@ -323,6 +320,7 @@ class WaferFileUploadInstance(NamedPrint):
 
 		self._chunk_size = None
 		self._chunk_amount = None
+		self._allocated_tstamp = None
 
 		self._chunk_array = None
 
@@ -433,9 +431,24 @@ class WaferFileUploadInstance(NamedPrint):
 
 		return self._chunk_array
 
+	@property
+	def allocated_tstamp(self):
+		if self._allocated_tstamp != None:
+			return self._allocated_tstamp
+
+		self._allocated_tstamp = self.info_data['allocated_tstamp']
+
+		return self._allocated_tstamp
+
+	def edit_db(self):
+		return DBAUploadInstance(
+			self.root_dir,
+			self.db_con
+		)
+
 	def write_journal(self, data):
 		try:
-			with DBAUploadInstance(self.root_dir, self.db_con) as dba:
+			with self.edit_db() as dba:
 				self._info_data = dba.write_journal(data)
 		except Exception as e:
 			self.nprint('Failed to write journal record:')
@@ -446,12 +459,6 @@ class WaferFileUploadInstance(NamedPrint):
 		with DBAUploadInstance(self.root_dir) as dba:
 			self.db_con = dba.db_con
 			yield dba
-
-		self.db_con = None
-
-	@contextlib.contextmanager
-	def _db_connect(self):
-		yield None
 
 		self.db_con = None
 
