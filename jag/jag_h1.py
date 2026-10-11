@@ -9,9 +9,10 @@ from .jag_mimes import RSP_CODE_MAP
 
 
 RN_BYTES = b'\r\n'
-RN_STR = '\r\n'
+RN_STR =    '\r\n'
+
 HSEP_BYTES = b': '
-HSEP_STR = ': '
+HSEP_STR =    ': '
 
 B_KB = 1024
 B_MB = B_KB**2

@@ -486,3 +486,49 @@ class LifeRemaining:
 		self.lfr_dur_s += amount_s
 
 
+
+class PerfTest:
+	DEFAULT_PAD = 0
+
+	def __init__(self, msg, pad=None):
+		self.msg = msg
+		self.pad = pad if (pad != None) else self.DEFAULT_PAD
+
+		self.start_time_cpu = None
+		self.start_time_real = None
+
+	def start(self):
+		self.start_time_cpu =  time.thread_time()
+		self.start_time_real = time.perf_counter()
+
+	@property
+	def result_cpu(self):
+		return round(
+			(time.thread_time() - self.start_time_cpu) * 1000,
+			3
+		)
+
+	@property
+	def result_real(self):
+		return round(
+			(time.perf_counter() - self.start_time_real) * 1000,
+			3
+		)
+
+	def __enter__(self):
+		self.start()
+		return self
+
+	def __exit__(self, e_type, e_val, e_trace):
+		print(
+			self.msg.ljust(self.pad), '|',
+			'REAL:', str(self.result_real).ljust(10), '|',
+			'CPU:', str(self.result_cpu).ljust(10), '|',
+			'DIFF:', abs(
+				round(self.result_cpu - self.result_real, 3)
+			)
+		)
+
+
+
+
