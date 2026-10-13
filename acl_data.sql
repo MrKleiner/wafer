@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 	-- admin
 	login          TEXT NOT NULL UNIQUE,
-	-- admin
+	-- 1
 	pswd           TEXT NOT NULL,
 
 	-- Paused accounts can't do shit.
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 	failed_auth_attempts INTEGER NOT NULL DEFAULT 0,
 
 	-- Short description, optional
-	descr          TEXT
+	descr TEXT
 );
 
 
@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS tokens (
 	userid         TEXT    NOT NULL,
 
+	-- d31a091f854bb063ca0cf817eba33414a9503fb96ac000313bbe8118fbac95ae
 	token_data     TEXT    NOT NULL UNIQUE,
+
+	-- Unix timestamps
 	created_tstamp INTEGER NOT NULL,
 	expires_tstamp INTEGER NOT NULL,
 
@@ -57,6 +60,10 @@ CREATE TABLE IF NOT EXISTS ip_table (
 	ip      TEXT NOT NULL,
 	tstamp  INTEGER,
 
+	-- 0 = login ok
+	-- 1 = login fail
+	reason  INTEGER,
+
 	FOREIGN KEY (userid)
 		REFERENCES profiles(userid)
 		ON UPDATE CASCADE
@@ -65,6 +72,8 @@ CREATE TABLE IF NOT EXISTS ip_table (
 
 
 
+-- This table is needed to tie uploads to users,
+-- so that they can resume them
 CREATE TABLE IF NOT EXISTS uploads (
 	userid    TEXT NOT NULL,
 
@@ -75,11 +84,22 @@ CREATE TABLE IF NOT EXISTS uploads (
 	-- 1 = pending
 	-- 2 = expired (the client took far too long to finish uploading)
 	-- 3 = max retry amount exceeded
-	-- 4 = fatal server error
+	-- 4 = upload done, but in the time it took the upload to finish - 
+	--     something has changed and now the "desired_relpath" is invalid or some shit...
+	--     (Basically, fatal failure of writing uploaded data to the desired filepath)
+	-- 5 = the client forcefully refused continuing this upload
+	-- 6 = irreversible fatal server error
 	status    INTEGER NOT NULL,
 
+	-- Desired upload path, relative to root
 	-- /fuck/shit/pootis.mp4
 	desired_relpath TEXT,
+
+	-- At what point this upload ended forever, irreversibly.
+	-- Very tied to "status".
+	-- Needed so that the journal can be purged of dead uploads
+	-- older than specified amount of time.
+	postmortem_tstamp INTEGER,
 
 	FOREIGN KEY (userid)
 		REFERENCES profiles(userid)
@@ -122,8 +142,8 @@ CREATE TABLE IF NOT EXISTS mask_linkage (
 	mask_id INTEGER NOT NULL,
 	userid  TEXT    NOT NULL,
 
-	-- This mask's order in the stack
-	-- Higher values "override" lower values
+	-- This mask's order in the target user's mask stack.
+	-- Higher values "override" lower values.
 	idx     INTEGER NOT NULL,
 
 	-- Because horrible fucking shit can happen

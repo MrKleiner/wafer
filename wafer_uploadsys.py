@@ -7,9 +7,8 @@ import contextlib
 from pathlib import Path
 
 from .wafer_util import *
+from .wafer_exceptions import *
 from .wafer_dbsys import DBAUploadInstance
-
-
 
 
 
@@ -26,45 +25,6 @@ class WaferFileUploadChunkWriter(NamedPrint):
 
 		self.fbuf = None
 
-	def __enter__(self):
-		self.written_bytes_hash = hashlib.sha256()
-		self.written_bytes_len = 0
-
-		self.chunk_fpath.unlink(missing_ok=True)
-
-		self.fbuf = open(self.chunk_fpath, 'wb')
-		self.fbuf.write(
-			bytes.fromhex(self.declared_hash_hex)
-		)
-
-		return self.add_bytes
-
-	def __exit__(self, e_type, e_val, e_trace):
-		self.fbuf.close()
-
-		if e_type:
-			self.chunk_fpath.unlink(missing_ok=True)
-			self.write_journal({
-				'okay_mate': False,
-				'descr':     str(e_val),
-			})
-			return
-
-		if self.written_bytes_hash.hexdigest() != self.declared_hash_hex:
-			self.chunk_fpath.unlink(missing_ok=True)
-			msg = 'FATAL: Hash mismatch'
-
-			self.write_journal({
-				'okay_mate': False,
-				'descr':     msg,
-			})
-
-			raise ValueError(msg)
-
-		self.write_journal({
-			'okay_mate': True,
-			'descr':     f'Wrote {self.written_bytes_len}',
-		})
 
 	def write_journal(self, data):
 		self.chunk_instance.chunk_array.upload_instance.write_journal(
@@ -87,10 +47,56 @@ class WaferFileUploadChunkWriter(NamedPrint):
 				'descr':     msg,
 			})
 
-			raise ValueError(msg)
+			raise WaferDisagrees(msg)
 
 		self.written_bytes_hash.update(tgt_bytes)
 		self.fbuf.write(tgt_bytes)
+
+
+	def __enter__(self):
+		self.written_bytes_hash = hashlib.sha256()
+		self.written_bytes_len = 0
+
+		self.chunk_fpath.unlink(missing_ok=True)
+
+		self.fbuf = open(self.chunk_fpath, 'wb')
+		self.fbuf.write(
+			bytes.fromhex(self.declared_hash_hex)
+		)
+
+		return self.add_bytes
+
+	def __exit__(self, e_type, e_val, e_trace):
+		try:
+			self.fbuf.close()
+		except:
+			pass
+
+		self.chunk_instance.promise_fpath.unlink(missing_ok=True)
+
+		if e_type:
+			self.chunk_fpath.unlink(missing_ok=True)
+			self.write_journal({
+				'okay_mate': False,
+				'descr':     str(e_val),
+			})
+			return
+
+		if self.written_bytes_hash.hexdigest() != self.declared_hash_hex:
+			self.chunk_fpath.unlink(missing_ok=True)
+			msg = 'FATAL: Hash mismatch'
+
+			self.write_journal({
+				'okay_mate': False,
+				'descr':     msg,
+			})
+
+			raise WaferDisagrees(msg)
+
+		self.write_journal({
+			'okay_mate': True,
+			'descr':     f'Wrote {self.written_bytes_len}',
+		})
 
 
 
@@ -99,10 +105,13 @@ class WaferFileUploadChunkInstance(NamedPrint):
 		self.chunk_array = chunk_array
 		self.chunk_index = int(chunk_index)
 		self.chunk_fpath = self.chunk_array.chunks_dir / str(self.chunk_index)
+		self.promise_fpath = self.chunk_fpath.with_suffix('.promise')
 
 		self._is_alright = None
 		self._file_exists = None
 		self._hash_matches = None
+		self._was_promised = None
+
 
 	@property
 	def file_exists(self):
@@ -146,6 +155,19 @@ class WaferFileUploadChunkInstance(NamedPrint):
 
 		return self._is_alright
 
+	@property
+	def was_promised(self):
+		if self._was_promised != None:
+			return self._was_promised
+
+		self._was_promised = self.promise_fpath.is_file()
+
+		return self._was_promised
+
+
+	def promise(self):
+		self.promise_fpath.touch()
+
 	def write(self, declared_hash_hex):
 		self._is_alright = None
 		self._file_exists = None
@@ -155,6 +177,16 @@ class WaferFileUploadChunkInstance(NamedPrint):
 			self,
 			declared_hash_hex,
 		)
+
+	def drop(self):
+		self._is_alright = None
+		self._file_exists = None
+		self._hash_matches = None
+		self._was_promised = None
+
+		self.chunk_fpath.unlink(missing_ok=True)
+		self.promise_fpath.unlink(missing_ok=True)
+
 
 	@contextlib.contextmanager
 	def real_fbuf(self):
@@ -169,6 +201,9 @@ class WaferFileUploadChunkInstance(NamedPrint):
 
 
 class WaferFileUploadChunkArray(NamedPrint):
+	DEFAULT_LOCK_TIMEOUT_S = 6.9
+
+
 	def __init__(self, upload_instance, chunks_dir, chunk_size, chunk_amount):
 		self.upload_instance = upload_instance
 
@@ -176,34 +211,14 @@ class WaferFileUploadChunkArray(NamedPrint):
 		self.chunk_size = chunk_size
 		self.chunk_amount = chunk_amount
 
-	def place(self, chunk_index, declared_hash_hex):
-		if chunk_index > (self.chunk_amount - 1):
-			raise ValueError(
-				f'Chunk with index {chunk_index} '
-				f'is outside of declared bounds {self.chunk_amount}'
-			)
+		self.lock_fpath = self.chunks_dir.parent / 'elock.pillock'
 
-		if self.count_retries() > self.upload_instance.info_data['max_retries']:
-			raise ValueError(
-				'A single chunk has exceeded maximum allowed amount of retries'
-			)
 
-		chunk_instance = WaferFileUploadChunkInstance(
-			self,
-			chunk_index,
-		)
-
-		if chunk_instance.file_exists:
-			raise ValueError(
-				f'Chunk at index {chunk_index} already exists. '
-				'It can only be modified. NOT created'
-			)
-
-		return chunk_instance.write(declared_hash_hex)
-
+	# RELATIVELY USELESS
 	def calc_resume_chunk(self):
 		present_chunk_amount = len(list(
 			i for i in self.chunks_dir.glob('*')
+			if (i.suffix != '.promise')
 		))
 
 		# No chunks present - resume from beginning
@@ -242,7 +257,7 @@ class WaferFileUploadChunkArray(NamedPrint):
 				chunk_idx,
 			)
 
-			if not chunk_instance.file_exists:
+			if not chunk_instance.file_exists and not chunk_instance.was_promised:
 				missing_chunks.append(chunk_instance)
 
 			if len(missing_chunks) > limit:
@@ -267,13 +282,50 @@ class WaferFileUploadChunkArray(NamedPrint):
 
 		return broken_chunks
 
+	def drop_broken_chunks(self):
+		for chunk_idx in range(self.chunk_amount):
+			chunk_instance = WaferFileUploadChunkInstance(
+				self,
+				chunk_idx,
+			)
+
+			if not chunk_instance.is_alright:
+				chunk_instance.drop()
+
+
+	def place(self, chunk_index, declared_hash_hex):
+		if chunk_index > (self.chunk_amount - 1):
+			raise WaferDisagrees(
+				f'Chunk with index {chunk_index} '
+				f'is outside of declared bounds {self.chunk_amount}'
+			)
+
+		if self.count_retries() > self.upload_instance.info_data['max_retries']:
+			raise WaferDisagrees(
+				'A single chunk has exceeded maximum allowed amount of retries'
+			)
+
+		chunk_instance = WaferFileUploadChunkInstance(
+			self,
+			chunk_index,
+		)
+
+		if chunk_instance.file_exists:
+			raise WaferDisagrees(
+				f'Chunk at index {chunk_index} already exists. '
+				'It can only be modified. NOT created'
+			)
+
+		return chunk_instance.write(declared_hash_hex)
+
 	def collapse_into(self, fpath):
-		present_chunk_amount = len(list(
+		present_chunk_amount = len(tuple(
 			i for i in self.chunks_dir.glob('*')
+			if (i.suffix != '.promise')
 		))
 
 		if present_chunk_amount != self.chunk_amount:
-			raise ValueError(
+			raise WaferDisagrees(
 				'Upload is unfinished OR fucked: '
 				f'Present chunk amount: {present_chunk_amount}, '
 				f'declared chunk amount: {self.chunk_amount}'
@@ -289,9 +341,11 @@ class WaferFileUploadChunkArray(NamedPrint):
 				)
 
 				if not chunk_instance.is_alright:
-					raise ValueError(
+					raise WaferDisagrees(
 						f'Cannot collapse: Faulty chunk at index {chunk_idx}'
 					)
+
+				chunk_instance.promise_fpath.unlink(missing_ok=True)
 
 				with chunk_instance.real_fbuf() as chunk_fbuf:
 					while (chunk := chunk_fbuf.read(8192)):
@@ -300,6 +354,16 @@ class WaferFileUploadChunkArray(NamedPrint):
 	def count_retries(self):
 		with self.upload_instance.edit_db() as dba:
 			return dba.count_retries() or 0
+
+
+	def __enter__(self):
+		return file_lock(
+			self.lock_fpath,
+			self.DEFAULT_LOCK_TIMEOUT_S
+		)
+
+	def __exit__(self, e_type, e_val, e_trace):
+		pass
 
 
 
@@ -325,6 +389,7 @@ class WaferFileUploadInstance(NamedPrint):
 		self._chunk_array = None
 
 		self.db_con = None
+
 
 	@classmethod
 	def alloc(cls, uploads_dir, file_size, chunk_size=None):
@@ -377,6 +442,7 @@ class WaferFileUploadInstance(NamedPrint):
 			return upload_instance
 		else:
 			return None
+
 
 	@property
 	def chunks_dpath(self):
@@ -440,6 +506,7 @@ class WaferFileUploadInstance(NamedPrint):
 
 		return self._allocated_tstamp
 
+
 	def edit_db(self):
 		return DBAUploadInstance(
 			self.root_dir,
@@ -453,6 +520,7 @@ class WaferFileUploadInstance(NamedPrint):
 		except Exception as e:
 			self.nprint('Failed to write journal record:')
 			print_exception_framed(e)
+
 
 	@contextlib.contextmanager
 	def db_connect(self):

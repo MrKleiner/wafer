@@ -13,6 +13,11 @@ THISDIR = Path(__file__).parent
 
 
 
+def convert_boolean(value):
+	return bool(int(value))
+
+
+
 class BasicDBConnection(NamedPrint):
 	PRAGMA = (
 		'PRAGMA journal_mode = WAL;',
@@ -128,6 +133,8 @@ class BasicDBConnection(NamedPrint):
 		if self.reuse:
 			self._connection = self.reuse.connection
 			return self._connection
+
+		sqlite3.register_converter('BOOLEAN', convert_boolean)
 
 		self._connection = sqlite3.connect(str(self.dbpath))
 		self._connection.row_factory = sqlite3.Row

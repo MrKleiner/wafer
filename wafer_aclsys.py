@@ -1,5 +1,6 @@
 import contextlib
 import uuid
+import fnmatch
 
 from .wafer_util import *
 from .wafer_exceptions import *
@@ -71,6 +72,9 @@ class WaferUserCredentials(NamedPrint):
 	def login(self, login):
 		login = str(login or '').strip()
 
+		if login == self.login:
+			return
+
 		if not login:
 			raise WaferDisagrees(
 				f'This login (>{login}<) appears to be an empty string '
@@ -91,8 +95,8 @@ class WaferUserCredentials(NamedPrint):
 				)
 
 			acl_db.ta_profiles.update_generic(
-				('userid', self.userid),
-				('login', login),
+				('userid', self.userid ),
+				('login',  login       ),
 			)
 
 			if not self.batching:
@@ -117,11 +121,11 @@ class WaferUserCredentials(NamedPrint):
 			)
 
 		with self.wafer_acl.edit_db() as acl_db:
-			if acl_db.ta_profiles.select_generic_one('pswd', pswd):
-				raise WaferDisagrees(
-					f'The new password (>{pswd}<) already exists '
-					"""(No, you can't have duplicate passwords)"""
-				)
+			# if acl_db.ta_profiles.select_generic_one('pswd', pswd):
+			# 	raise WaferDisagrees(
+			# 		f'The new password (>{pswd}<) already exists '
+			# 		"""(No, you can't have duplicate passwords)"""
+			# 	)
 
 			# Update password
 			acl_db.ta_profiles.update_generic(
@@ -167,7 +171,7 @@ class WaferUserCredentials(NamedPrint):
 		with self.wafer_acl.edit_db() as acl_db:
 			acl_db.ta_profiles.update_generic(
 				('userid', self.userid ),
-				('sugmar', sugmar                    ),
+				('sugmar', sugmar      ),
 			)
 
 			if not self.batching:
@@ -182,7 +186,7 @@ class WaferUserCredentials(NamedPrint):
 		with self.wafer_acl.edit_db() as acl_db:
 			acl_db.ta_profiles.update_generic(
 				('userid', self.userid ),
-				('sugmar', paused      ),
+				('paused', paused      ),
 			)
 
 			if not self.batching:
@@ -337,6 +341,7 @@ class WaferMaskInstance(NamedPrint):
 			if not self.batching:
 				acl_db.db_con.commit()
 
+
 	@raw_text.setter
 	def raw_text(self, val):
 		self._wcard_array = None
@@ -383,20 +388,19 @@ class WaferMaskInstance(NamedPrint):
 			tgt_path = wcmatch_pathlib.PurePath(tgt_path)
 
 		if self.syntax == 1:
-			tgt_path = tgt_path
+			tgt_path = str(tgt_path)
 
 		for wcard_str in self.wcard_array:
 			if self.syntax == 0:
-				return tgt_path.globmatch(
+				if tgt_path.globmatch(
 					wcard_str,
 					flags=wcmatch_pathlib.GLOBSTAR
-				)
+				):
+					return True
 
 			if self.syntax == 1:
-				return fnmatch(
-					tgt_path,
-					wcard_str,
-				)
+				if fnmatch(tgt_path, wcard_str):
+					return True
 
 		return False
 
@@ -586,6 +590,8 @@ class WaferACL(NamedPrint):
 			wafer_user.creds.failed_auth_attempts += 1
 			return (False, wafer_user)
 
+		wafer_user.creds.failed_auth_attempts = 0
+
 		return (True, wafer_user)
 
 	def create_user(self, login, pswd):
@@ -620,6 +626,8 @@ class WaferACL(NamedPrint):
 				acl_db.ta_profiles.delete_generic(
 					'userid', userid
 				)
+
+				acl_db.db_con.commit()
 
 			raise e
 
